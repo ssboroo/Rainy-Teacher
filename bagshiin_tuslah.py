@@ -23,7 +23,7 @@ except ImportError:
     Image = ImageTk = None
 
 APP_NAME = "Багшийн Туслах"
-APP_VERSION = "1.5.0"
+APP_VERSION = "1.5.1"
 BG = "#F4F7FB"
 NAV = "#101B31"
 BLUE = "#3478F6"
@@ -125,10 +125,12 @@ class Store:
             ("Хөвсгөл Нуур", "ocean", "БАЙГАЛЬ ХАМГААЛАГЧ", "Эх дэлхийгээ хайрлан хамгаалсанд", "{achievement} санаачилга гарган, байгаль орчноо хамгаалах ажилд идэвхтэй оролцсонд олгов."),
             ("Нил Ягаан Хилэн", "plum", "ШИЛДЭГ БАГ", "Хамтын ажиллагааны амжилтад", "{achievement} хамтын амжилт гаргаж, эв нэгдэлтэй ажилласныг үнэлэв."),
             ("Гааны Сэрүүн", "mint", "ДУРСГАЛЫН БИЧИГ", "Эрдмийн баярын дурсгалд", "Эрдмийн баяраа амжилттай тэмдэглэж, {achievement} үйлсийг бүтээсний дурсгалд гардуулав."),
-            ("Хааны Хөх", "navy", "АНГИЙН АВАРГА", "Тууштай хөдөлмөр, амжилтад", "{achievement} амжилт гарган анги хамт олноо манлайлсныг үнэлж олгов."),
+            ("Хөх Алт · Монгол хээ", "navy", "ӨРГӨМЖЛӨЛ", "Амжилтаа үнэлүүлэв", "{achievement} амжилт гаргасныг үнэлж энэхүү өргөмжлөлийг гардуулав."),
             ("Хүрэл Тамга", "bronze", "БҮТЭЭЛЧ САНААНЫ ӨРГӨМЖЛӨЛ", "Шинийг санаачилсанд", "{achievement} санаачилга, бүтээлч шийдлээрээ бусдыгаа уриалан оролцсонд гардуулав."),
             ("Сувдан Гэгээ", "pearl", "ОНЦГОЙ АМЖИЛТЫН ӨРГӨМЖЛӨЛ", "Өндөр амжилт гаргасанд", "{achievement} онцгой амжилтаар хамт олныхоо бахархал болсонд гардуулав."),
         ]
+        if not self.db.execute("SELECT 1 FROM certificate_templates WHERE name='Хөх Алт · Монгол хээ'").fetchone():
+            self.db.execute("UPDATE certificate_templates SET name='Хөх Алт · Монгол хээ' WHERE name='Хааны Хөх'")
         for item in defaults:
             self.db.execute("INSERT OR IGNORE INTO certificate_templates(name,style,title,subtitle,body) VALUES(?,?,?,?,?)", item)
 
@@ -162,7 +164,7 @@ CERT_DESIGNS = {
     "ocean":   {"colors":("#176b91","#d4eaf2","#f3fbff"),"motif":"≋　✦　≋","border":"solid","layout":"wave","pattern":"cloud"},
     "plum":    {"colors":("#75456f","#ecddec","#fcf7fc"),"motif":"❦　✧　❦","border":"groove","layout":"seal","pattern":"ever"},
     "mint":    {"colors":("#46856e","#dcefe6","#f6fcf8"),"motif":"❋　◇　❋","border":"ridge","layout":"lattice","pattern":"alkhan"},
-    "navy":    {"colors":("#203d5d","#d9e4ef","#f6f9fc"),"motif":"⚜　✦　⚜","border":"double","layout":"classic","pattern":"ulzii"},
+    "navy":    {"colors":("#183f73","#efdfb3","#fffaf0"),"motif":"✦　❖　✦","border":"double","layout":"classic","pattern":"royal"},
     "bronze":  {"colors":("#8d623c","#ede0cd","#fcf8f1"),"motif":"◈　❖　◈","border":"groove","layout":"corners","pattern":"ever"},
     "pearl":   {"colors":("#837248","#eee9d6","#fffdf5"),"motif":"✺　◇　✺","border":"double","layout":"minimal","pattern":"lotus"},
 }
@@ -171,7 +173,7 @@ CERT_STYLE_LABELS = {
     "Алтан Эрдэнэ":"gold", "Хөх Тэнгэр":"sky", "Улаан Тамга":"ruby", "Ногоон Хээ":"jade", "Нил ягаан Эрдэм":"violet",
     "Зэс Хүрээ":"copper", "Шөнийн Тэнгэр":"midnight", "Номин Далай":"teal", "Шүрэн Цэцэг":"coral", "Хөх Индранил":"indigo",
     "Маргад Эрдэнэ":"emerald", "Мөнгөн Хээ":"silver", "Нарны Туяа":"amber", "Сарнай":"rose", "Хөвсгөл Нуур":"ocean",
-    "Нил Ягаан Хилэн":"plum", "Гааны Сэрүүн":"mint", "Хааны Хөх":"navy", "Хүрэл Тамга":"bronze", "Сувдан Гэгээ":"pearl",
+    "Нил Ягаан Хилэн":"plum", "Гааны Сэрүүн":"mint", "Хөх Алт · Монгол хээ":"navy", "Хүрэл Тамга":"bronze", "Сувдан Гэгээ":"pearl",
 }
 
 PRESENTATION_THEMES = {
@@ -226,6 +228,30 @@ MONGOLIAN_PATTERN_PATHS = {
 
 def mongolian_border_svg(pattern: str, accent: str) -> str:
     """Create a self-contained, printer-friendly Mongolian geometric border."""
+    if pattern == "royal":
+        blue, gold = accent, "#b58a35"
+        return f"""<svg class='mongol-border' aria-hidden='true' viewBox='0 0 1000 700' preserveAspectRatio='none' xmlns='http://www.w3.org/2000/svg'>
+        <rect x='16' y='16' width='968' height='668' fill='none' stroke='{blue}' stroke-width='11'/>
+        <rect x='30' y='30' width='940' height='640' fill='none' stroke='{gold}' stroke-width='3'/>
+        <rect x='42' y='42' width='916' height='616' fill='none' stroke='{blue}' stroke-width='2'/>
+        <g fill='none' stroke='{blue}' stroke-width='5' stroke-linejoin='miter'>
+          <path d='M44 146V44h102v28H72v74zm912 0V44H854v28h74v74zM44 554v102h102v-28H72v-74zm912 0v102H854v-28h74v-74z'/>
+          <path d='M55 55h40v15H70v40H55zm890 0h-40v15h25v40h15zM55 645h40v-15H70v-40H55zm890 0h-40v-15h25v-40h15z'/>
+        </g>
+        <g fill='none' stroke='{gold}' stroke-width='3'>
+          <path d='M50 50h132v4H54v132h-4zm900 0H818v4h128v132h4zM50 650h132v-4H54V514h-4zm900 0H818v-4h128V514h4z'/>
+          <path d='M48 220h12v-12h12v12h12v12H72v12H60v-12H48zm904 0h-12v-12h-12v12h-12v12h12v12h12v-12h12z'/>
+          <path d='M48 480h12v12h12v-12h12v-12H72v-12H60v12H48zm904 0h-12v12h-12v-12h-12v-12h12v-12h12v12h12z'/>
+          <path d='M452 58l48 28 48-28 18 12-66 40-66-40zM452 642l48-28 48 28 18-12-66-40-66 40z'/>
+        </g>
+        <g fill='{blue}' stroke='{gold}' stroke-width='3'>
+          <path d='M500 50l18 18-18 18-18-18z'/><path d='M500 614l18 18-18 18-18-18z'/>
+          <path d='M54 330l17-17 17 17-17 17z'/><path d='M946 330l-17-17-17 17 17 17z'/>
+        </g>
+        <path d='M70 582c72-52 140-52 212 0s140 52 212 0 140-52 212 0 140 52 212 0' fill='none' stroke='{blue}' stroke-width='15'/>
+        <path d='M70 590c72-52 140-52 212 0s140 52 212 0 140-52 212 0 140 52 212 0' fill='none' stroke='{gold}' stroke-width='4'/>
+        <path d='M70 606c72-52 140-52 212 0s140 52 212 0 140-52 212 0 140 52 212 0' fill='none' stroke='{blue}' stroke-width='6'/>
+        </svg>"""
     path = MONGOLIAN_PATTERN_PATHS.get(pattern, MONGOLIAN_PATTERN_PATHS["ulzii"])
     return f"""<svg class='mongol-border' aria-hidden='true' viewBox='0 0 1000 700' preserveAspectRatio='none' xmlns='http://www.w3.org/2000/svg'>
     <defs><pattern id='hee' width='76' height='50' patternUnits='userSpaceOnUse'><path d='{path}' fill='none' stroke='{accent}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' opacity='.76'/></pattern></defs>
@@ -868,6 +894,19 @@ class App(tk.Tk):
                            xx+3*unit,y2-5, xx+3*unit,y2-5-3*unit,
                            xx,y2-5-3*unit, xx,y2-5]
             canvas.create_line(*bottom_points,fill=accent,width=line_width,joinstyle="miter")
+        if row["style"] == "navy":
+            gold = "#b58a35"
+            canvas.create_rectangle(x1+5,y1+5,x2-5,y2-5,outline=gold,width=1)
+            for left in (True,False):
+                for top in (True,False):
+                    cx=x1+13 if left else x2-13; cy=y1+13 if top else y2-13
+                    sx=1 if left else -1; sy=1 if top else -1
+                    canvas.create_line(cx,cy+sy*28,cx,cy,cx+sx*28,cy,fill=gold,width=2)
+                    canvas.create_line(cx+sx*6,cy+sy*22,cx+sx*6,cy+sy*6,cx+sx*22,cy+sy*6,fill=gold,width=1)
+            cx=width/2
+            for yy in (y1+12,y2-12):
+                canvas.create_polygon(cx,yy-6,cx+6,yy,cx,yy+6,cx-6,yy,
+                                      fill=paper,outline=gold,width=2)
         title=row["title"] or "ӨРГӨМЖЛӨЛ"
         subtitle=row["subtitle"] or "Амжилтаа үнэлүүлэв"
         scale=max(.65,min(1.0,width/560))
