@@ -1,5 +1,7 @@
 # Багшийн Туслах
 
+![Rainy Teacher](assets/rainy_teacher_logo.svg)
+
 Монгол хэл дээрх, офлайнаар ажилладаг Windows desktop апп. Ангийн бүртгэл, ирц, дүн, өргөмжлөл болон шалгалтын материалыг нэг дороос удирдана.
 
 ## Боломжууд
@@ -14,6 +16,12 @@
 
 Интернэт холболт шаардлагагүй. Сурагчдын мэдээлэл тухайн Windows компьютерт хадгалагдана.
 
+## Windows installer
+
+GitHub-ийн **Actions** табаас `Rainy-Teacher-Windows` artifact-ийг татаж аваад `RainyTeacher-Setup-1.3.0.exe` суулгагчийг ажиллуулна. Суулгагч Start цэсэнд Rainy Teacher нэмнэ. Desktop shortcut-ийг сонголтоор үүсгэнэ.
+
+Эх кодоос Windows дээр build хийхдээ Python 3.10+ болон Inno Setup суулгаад `build_windows.bat` ажиллуулна. Энэ нь `dist\RainyTeacher.exe` portable app болон `dist-installer\RainyTeacher-Setup-1.3.0.exe` installer үүсгэнэ.
+
 ## Windows дээр ажиллуулах
 
 Python 3.10+ суулгасан компьютер дээр:
@@ -22,9 +30,7 @@ Python 3.10+ суулгасан компьютер дээр:
 py bagshiin_tuslah.py
 ```
 
-Ганц `.exe` файл үүсгэх бол `build_windows.bat` ажиллуулна. Файл `dist\БагшийнТуслах.exe` дотор үүснэ.
-
-GitHub Actions нь `main` салбар руу push хийх бүрд Windows executable-ийг build хийж artifact болгон хадгална. `Actions → Build Windows app` дотроос татна.
+GitHub Actions нь `main` салбар руу push хийх бүрд installer болон portable EXE-г Windows дээр build хийж artifact болгон хадгална.
 
 ## Өгөгдлийн байршил
 
