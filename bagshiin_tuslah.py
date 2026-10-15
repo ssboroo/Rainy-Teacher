@@ -12,6 +12,7 @@ import shutil
 import sqlite3
 import sys
 import tempfile
+import traceback
 import webbrowser
 from io import BytesIO
 from datetime import date, datetime
@@ -26,7 +27,7 @@ except ImportError:
     Image = ImageTk = None
 
 APP_NAME = "Багшийн Туслах"
-APP_VERSION = "1.7.1"
+APP_VERSION = "1.7.2"
 BG = "#F4F7FB"
 NAV = "#101B31"
 BLUE = "#3478F6"
@@ -48,6 +49,30 @@ def data_dir() -> Path:
 def resource_path(relative_path: str) -> Path:
     bundle_dir = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
     return bundle_dir / relative_path
+
+
+def _report_startup_error() -> None:
+    """Save the hidden-windowed-build traceback and show a useful error."""
+    details = traceback.format_exc()
+    try:
+        log_path = data_dir() / "startup-error.log"
+    except Exception:
+        log_path = Path(tempfile.gettempdir()) / "RainyTeacher-startup-error.log"
+    try:
+        log_path.write_text(
+            f"Rainy Teacher {APP_VERSION} startup failure\n{details}",
+            encoding="utf-8",
+        )
+    except OSError:
+        pass
+    try:
+        messagebox.showerror(
+            "Rainy Teacher эхэлж чадсангүй",
+            "Апп эхлэх үед алдаа гарлаа. Алдааны дэлгэрэнгүйг энд хадгалав:\n"
+            f"{log_path}\n\n{details[-2500:]}",
+        )
+    except Exception:
+        pass
 
 
 def _certificate_default_design(row, accent, pale, paper):
@@ -1766,4 +1791,7 @@ class App(tk.Tk):
 
 
 if __name__ == "__main__":
-    App().mainloop()
+    try:
+        App().mainloop()
+    except Exception:
+        _report_startup_error()

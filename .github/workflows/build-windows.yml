@@ -23,17 +23,34 @@ jobs:
           python -m pip install --upgrade pyinstaller pillow python-pptx pywin32
           python prepare_assets.py
           python -m PyInstaller --noconfirm --clean --onefile --windowed --name "RainyTeacher" --icon "assets/rainy_teacher.ico" --add-data "assets/rainy_teacher_mark.png;assets" --add-data "assets/rainy_teacher.ico;assets" bagshiin_tuslah.py
+      - name: Smoke test portable executable
+        shell: pwsh
+        run: |
+          $exe = (Resolve-Path "dist/RainyTeacher.exe").Path
+          $process = Start-Process -FilePath $exe -PassThru
+          try {
+            Start-Sleep -Seconds 15
+            $process.Refresh()
+            if ($process.HasExited) {
+              throw "RainyTeacher.exe exited during startup with code $($process.ExitCode)."
+            }
+          } finally {
+            $process.Refresh()
+            if (-not $process.HasExited) {
+              Stop-Process -Id $process.Id -Force
+            }
+          }
       - name: Verify PowerPoint exports
         run: python -m unittest discover -s tests -v
       - name: Install Inno Setup
         run: choco install innosetup --no-progress -y
       - name: Build Windows installer
-        run: iscc /DAppVersion=1.7.1 installer.iss
+        run: iscc /DAppVersion=1.7.2 installer.iss
       - name: Save installer and portable app
         uses: actions/upload-artifact@v4
         with:
-          name: Rainy-Teacher-Windows-1.7.1
+          name: Rainy-Teacher-Windows-1.7.2
           path: |
-            dist-installer/RainyTeacher-Setup-1.7.1.exe
+            dist-installer/RainyTeacher-Setup-1.7.2.exe
             dist/RainyTeacher.exe
           if-no-files-found: error
