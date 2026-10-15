@@ -948,7 +948,7 @@ class App(tk.Tk):
         if custom.get("elements"):
             sx,sy=width/960,height/679
             canvas.configure(bg=custom.get("background",paper))
-            self.preview_logo_photo=None
+            self.preview_logo_photos=[]
             values={"{name}":recipient or "Сурагчийн нэр","{achievement}":achievement or "Амжилтын тайлбар",
                     "{organization}":organization or "Сургуулийн нэр","{teacher}":teacher or "Багшийн нэр",
                     "{date}":issue_date or "2026-10-15"}
@@ -962,7 +962,7 @@ class App(tk.Tk):
                     elif kind=="image" and el.get("data") and Image and ImageTk:
                         image=Image.open(BytesIO(base64.b64decode(el["data"]))).convert("RGBA")
                         image.thumbnail((max(1,int(w*sx)),max(1,int(h*sy))),Image.Resampling.LANCZOS)
-                        self.preview_logo_photo=ImageTk.PhotoImage(image);canvas.create_image(coords[0]+(coords[2]-coords[0])/2,coords[1]+(coords[3]-coords[1])/2,image=self.preview_logo_photo)
+                        photo=ImageTk.PhotoImage(image);self.preview_logo_photos.append(photo);canvas.create_image(coords[0]+(coords[2]-coords[0])/2,coords[1]+(coords[3]-coords[1])/2,image=photo)
                     else:
                         text=str(el.get("text",""))
                         for token,value in values.items():text=text.replace(token,value)
