@@ -17,7 +17,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox, filedialog, simpledialog
 
 APP_NAME = "Багшийн Туслах"
-APP_VERSION = "1.1.0"
+APP_VERSION = "1.2.0"
 BG = "#F3F6FB"
 NAV = "#13213A"
 BLUE = "#356AE6"
@@ -95,6 +95,21 @@ class Store:
             ("Улаан Тамга", "ruby", "ТАЛАРХАЛ", "Хичээл зүтгэл, оролцоонд", "{achievement} ажилд идэвх санаачилгатай оролцсонд талархал илэрхийлэв."),
             ("Ногоон Хээ", "jade", "ӨРГӨМЖЛӨЛ", "Шилдэг сурагч", "{achievement} амжилтаар манлайлан суралцсанд энэхүү өргөмжлөлийг гардуулав."),
             ("Нил ягаан Эрдэм", "violet", "ТУСГАЙ БАЙР", "Авьяас, чадвараа нээн харуулсанд", "{achievement} амжилт гаргасныг үнэлж тусгай өргөмжлөл гардуулав."),
+            ("Зэс Хүрээ", "copper", "АВАРГЫН ӨРГӨМЖЛӨЛ", "Спортын тэмцээний амжилтад", "{achievement} амжилт гаргаж, хурд хүчээрээ манлайлсанд гардуулав."),
+            ("Шөнийн Тэнгэр", "midnight", "ОЛИМПИАДЫН БАТЛАМЖ", "Оюун ухаан, мэдлэгээ сорьсонд", "{achievement} амжилт үзүүлж, мэдлэг чадвараа батлан харуулсанд олгов."),
+            ("Номин Далай", "teal", "СУДАЛГААНЫ ӨРГӨМЖЛӨЛ", "Шинэ санаа, нээлтэд", "{achievement} бүтээл, судалгаагаар мэдлэгийн санг баяжуулсанд гардуулав."),
+            ("Шүрэн Цэцэг", "coral", "УРЛАГИЙН ӨРГӨМЖЛӨЛ", "Уран бүтээлийн амжилтад", "{achievement} уран бүтээлээр авьяас билгээ нээн харуулсанд гардуулав."),
+            ("Хөх Индранил", "indigo", "МАНЛАЙЛАГЧ СУРАГЧ", "Эерэг үлгэр дуурайлалд", "{achievement} манлайлал гаргаж, анги хамт олноо үлгэрлэн оролцсонд олгов."),
+            ("Маргад Эрдэнэ", "emerald", "НОМЫН САЙН НӨХӨР", "Уншихуйн амжилтад", "{achievement} уншиж судлан, эрдэм мэдлэгээ тасралтгүй ахиулсанд гардуулав."),
+            ("Мөнгөн Хээ", "silver", "ХИЧЭЭЛИЙН ИРЦИЙН БАТЛАМЖ", "Хариуцлагатай суралцсанд", "Хичээлдээ тогтмол хамрагдаж, суралцах хариуцлагаа эрхэмлэн {achievement} амжилт үзүүлснийг үнэлэв."),
+            ("Нарны Туяа", "amber", "САЙН ҮЙЛСИЙН ӨРГӨМЖЛӨЛ", "Найрсаг, тусч зан чанарт", "{achievement} сайн үйлс, тусч сэтгэлээр хамт олондоо үлгэрлэснийг үнэлэв."),
+            ("Сарнай", "rose", "ТАЛАРХАЛ", "Сэтгэл зүтгэл, дэмжлэгт", "{achievement} хувь нэмэр оруулж, хамт олны амжилтад үнэтэй дэмжлэг үзүүлсэнд талархав."),
+            ("Хөвсгөл Нуур", "ocean", "БАЙГАЛЬ ХАМГААЛАГЧ", "Эх дэлхийгээ хайрлан хамгаалсанд", "{achievement} санаачилга гарган, байгаль орчноо хамгаалах ажилд идэвхтэй оролцсонд олгов."),
+            ("Нил Ягаан Хилэн", "plum", "ШИЛДЭГ БАГ", "Хамтын ажиллагааны амжилтад", "{achievement} хамтын амжилт гаргаж, эв нэгдэлтэй ажилласныг үнэлэв."),
+            ("Гааны Сэрүүн", "mint", "ДУРСГАЛЫН БИЧИГ", "Эрдмийн баярын дурсгалд", "Эрдмийн баяраа амжилттай тэмдэглэж, {achievement} үйлсийг бүтээсний дурсгалд гардуулав."),
+            ("Хааны Хөх", "navy", "АНГИЙН АВАРГА", "Тууштай хөдөлмөр, амжилтад", "{achievement} амжилт гарган анги хамт олноо манлайлсныг үнэлж олгов."),
+            ("Хүрэл Тамга", "bronze", "БҮТЭЭЛЧ САНААНЫ ӨРГӨМЖЛӨЛ", "Шинийг санаачилсанд", "{achievement} санаачилга, бүтээлч шийдлээрээ бусдыгаа уриалан оролцсонд гардуулав."),
+            ("Сувдан Гэгээ", "pearl", "ОНЦГОЙ АМЖИЛТЫН ӨРГӨМЖЛӨЛ", "Өндөр амжилт гаргасанд", "{achievement} онцгой амжилтаар хамт олныхоо бахархал болсонд гардуулав."),
         ]
         for item in defaults:
             self.db.execute("INSERT OR IGNORE INTO certificate_templates(name,style,title,subtitle,body) VALUES(?,?,?,?,?)", item)
@@ -111,17 +126,68 @@ class Store:
         self.db.close()
 
 
-CERT_COLORS = {
-    "gold": ("#a77920", "#f5e8bc", "#fffaf0"),
-    "sky": ("#2469a8", "#d6eafd", "#f4faff"),
-    "ruby": ("#9e334b", "#f3d7dc", "#fff7f8"),
-    "jade": ("#287c63", "#d2eee3", "#f4fcf8"),
-    "violet": ("#7056a4", "#e4dcf3", "#faf8ff"),
+CERT_DESIGNS = {
+    "gold":    {"colors":("#a77920","#f5e8bc","#fffaf0"),"motif":"✦　❖　✦","border":"double","layout":"classic","pattern":"ulzii"},
+    "sky":     {"colors":("#2469a8","#d6eafd","#f4faff"),"motif":"☼　✧　☼","border":"solid","layout":"ribbon","pattern":"cloud"},
+    "ruby":    {"colors":("#9e334b","#f3d7dc","#fff7f8"),"motif":"❧　✦　❧","border":"double","layout":"corners","pattern":"ever"},
+    "jade":    {"colors":("#287c63","#d2eee3","#f4fcf8"),"motif":"❋　❖　❋","border":"ridge","layout":"lattice","pattern":"alkhan"},
+    "violet":  {"colors":("#7056a4","#e4dcf3","#faf8ff"),"motif":"✧　✦　✧","border":"double","layout":"seal","pattern":"lotus"},
+    "copper":  {"colors":("#a85c37","#f1dccb","#fff9f3"),"motif":"❖　◈　❖","border":"groove","layout":"corners","pattern":"ever"},
+    "midnight":{"colors":("#243b68","#d8e1f2","#f6f8fd"),"motif":"☾　✦　☽","border":"solid","layout":"night","pattern":"ulzii"},
+    "teal":    {"colors":("#167b83","#d2eef0","#f3fcfc"),"motif":"≈　✧　≈","border":"double","layout":"wave","pattern":"cloud"},
+    "coral":   {"colors":("#c35a4c","#f8dfd7","#fff8f5"),"motif":"❀　✦　❀","border":"ridge","layout":"floral","pattern":"lotus"},
+    "indigo":  {"colors":("#4b55a0","#e0e3f8","#f8f8ff"),"motif":"✧　◇　✧","border":"double","layout":"ribbon","pattern":"alkhan"},
+    "emerald": {"colors":("#26734b","#d8eddb","#f5fbf3"),"motif":"❈　❖　❈","border":"solid","layout":"lattice","pattern":"ulzii"},
+    "silver":  {"colors":("#687786","#e2e8ed","#fbfcfd"),"motif":"◇　✧　◇","border":"double","layout":"minimal","pattern":"alkhan"},
+    "amber":   {"colors":("#b87519","#f7e7c7","#fffaf1"),"motif":"☀　❖　☀","border":"ridge","layout":"sun","pattern":"ever"},
+    "rose":    {"colors":("#a94f78","#f4dce9","#fff8fc"),"motif":"❀　❧　❀","border":"double","layout":"floral","pattern":"lotus"},
+    "ocean":   {"colors":("#176b91","#d4eaf2","#f3fbff"),"motif":"≋　✦　≋","border":"solid","layout":"wave","pattern":"cloud"},
+    "plum":    {"colors":("#75456f","#ecddec","#fcf7fc"),"motif":"❦　✧　❦","border":"groove","layout":"seal","pattern":"ever"},
+    "mint":    {"colors":("#46856e","#dcefe6","#f6fcf8"),"motif":"❋　◇　❋","border":"ridge","layout":"lattice","pattern":"alkhan"},
+    "navy":    {"colors":("#203d5d","#d9e4ef","#f6f9fc"),"motif":"⚜　✦　⚜","border":"double","layout":"classic","pattern":"ulzii"},
+    "bronze":  {"colors":("#8d623c","#ede0cd","#fcf8f1"),"motif":"◈　❖　◈","border":"groove","layout":"corners","pattern":"ever"},
+    "pearl":   {"colors":("#837248","#eee9d6","#fffdf5"),"motif":"✺　◇　✺","border":"double","layout":"minimal","pattern":"lotus"},
+}
+
+CERT_STYLE_LABELS = {
+    "Алтан Эрдэнэ":"gold", "Хөх Тэнгэр":"sky", "Улаан Тамга":"ruby", "Ногоон Хээ":"jade", "Нил ягаан Эрдэм":"violet",
+    "Зэс Хүрээ":"copper", "Шөнийн Тэнгэр":"midnight", "Номин Далай":"teal", "Шүрэн Цэцэг":"coral", "Хөх Индранил":"indigo",
+    "Маргад Эрдэнэ":"emerald", "Мөнгөн Хээ":"silver", "Нарны Туяа":"amber", "Сарнай":"rose", "Хөвсгөл Нуур":"ocean",
+    "Нил Ягаан Хилэн":"plum", "Гааны Сэрүүн":"mint", "Хааны Хөх":"navy", "Хүрэл Тамга":"bronze", "Сувдан Гэгээ":"pearl",
 }
 
 
+MONGOLIAN_PATTERN_PATHS = {
+    # Angular continuous knots inspired by ulzii and alhan khее.
+    "ulzii": "M1 18h8V8h10V1h18v7h10v10h8v18h-8v10H37v7H19v-7H9V36H1z M19 8v10h10v10h10V18h8 M9 28h10v10h10v10",
+    "alkhan": "M1 1h12v12h12V1h12v24h12V13h12v12h12V1h12 M1 49h12V37h12v12h12V25h12v12h12v12h12",
+    "ever": "M2 25c0-13 18-18 25-8 6 8-1 18-9 14-5-3-2-10 3-9 M35 25c0-13 18-18 25-8 6 8-1 18-9 14-5-3-2-10 3-9 M2 3h10v8h10 M35 39h10v8h10",
+    "cloud": "M1 35c6 0 6-12 13-12s7 12 14 12 7-12 14-12 7 12 14 12 7-12 14-12 7 12 14 12 M1 43h14m4 0h14m4 0h14m4 0h14",
+    "lotus": "M1 38c8-3 10-13 18-19 3 9 3 17 0 24 7-8 13-13 18-15 5 2 11 7 18 15-3-7-3-15 0-24 8 6 10 16 18 19 M1 45h72",
+}
+
+
+def mongolian_border_svg(pattern: str, accent: str) -> str:
+    """Create a self-contained, printer-friendly Mongolian geometric border."""
+    path = MONGOLIAN_PATTERN_PATHS.get(pattern, MONGOLIAN_PATTERN_PATHS["ulzii"])
+    return f"""<svg class='mongol-border' aria-hidden='true' viewBox='0 0 1000 700' preserveAspectRatio='none' xmlns='http://www.w3.org/2000/svg'>
+    <defs><pattern id='hee' width='76' height='50' patternUnits='userSpaceOnUse'><path d='{path}' fill='none' stroke='{accent}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' opacity='.76'/></pattern></defs>
+    <rect x='17' y='17' width='966' height='666' fill='none' stroke='{accent}' stroke-width='5'/>
+    <rect x='27' y='27' width='946' height='646' fill='none' stroke='{accent}' stroke-width='1.5' opacity='.72'/>
+    <rect x='39' y='39' width='922' height='34' fill='url(#hee)'/>
+    <rect x='39' y='627' width='922' height='34' fill='url(#hee)'/>
+    <g transform='translate(39 661) rotate(-90)'><rect width='588' height='34' fill='url(#hee)'/></g>
+    <g transform='translate(961 39) rotate(90)'><rect width='588' height='34' fill='url(#hee)'/></g>
+    <g fill='white' stroke='{accent}' stroke-width='3'><circle cx='56' cy='56' r='12'/><circle cx='944' cy='56' r='12'/><circle cx='56' cy='644' r='12'/><circle cx='944' cy='644' r='12'/></g>
+    <g fill='{accent}'><path d='M56 49l2 5 5 2-5 2-2 5-2-5-5-2 5-2z'/><path d='M944 49l2 5 5 2-5 2-2 5-2-5-5-2 5-2z'/><path d='M56 637l2 5 5 2-5 2-2 5-2-5-5-2 5-2z'/><path d='M944 637l2 5 5 2-5 2-2 5-2-5-5-2 5-2z'/></g>
+    </svg>"""
+
+
 def certificate_html(record: dict) -> str:
-    accent, pale, paper = CERT_COLORS.get(record.get("style", "gold"), CERT_COLORS["gold"])
+    design = CERT_DESIGNS.get(record.get("style", "gold"), CERT_DESIGNS["gold"])
+    accent, pale, paper = design["colors"]
+    motif, border, layout = design["motif"], design["border"], design["layout"]
+    border_svg = mongolian_border_svg(design["pattern"], accent)
     vals = {k: str(record.get(k, "") or "") for k in ("recipient", "achievement", "teacher", "organization", "issue_date", "title", "subtitle", "body")}
     body = vals["body"].replace("{name}", vals["recipient"]).replace("{achievement}", vals["achievement"])
     logo = ""
@@ -133,8 +199,10 @@ def certificate_html(record: dict) -> str:
     <style>
     @page{{size:A4 landscape;margin:0}}*{{box-sizing:border-box}}body{{margin:0;background:#e9edf3;color:#27344a;font-family:'Georgia','Times New Roman',serif}}
     .sheet{{width:297mm;height:210mm;margin:12px auto;padding:12mm;background:{paper};position:relative;overflow:hidden;box-shadow:0 8px 36px #9aa5b5}}
-    .frame{{height:100%;border:3px double {accent};outline:1px solid {accent};outline-offset:-9px;padding:12mm 17mm;text-align:center;position:relative;background:radial-gradient(ellipse at 50% 0%,{pale} 0,transparent 42%),{paper}}}
-    .frame:before,.frame:after{{content:'✧　❖　✧';position:absolute;left:0;right:0;color:{accent};font-size:16px;letter-spacing:12px;opacity:.78}}
+    .frame{{height:100%;border:3px {border} {accent};outline:1px solid {accent};outline-offset:-9px;padding:12mm 17mm;text-align:center;position:relative;background:radial-gradient(ellipse at 50% 0%,{pale} 0,transparent 42%),{paper}}}
+    .mongol-border{{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}}
+    .frame>:not(.mongol-border){{position:relative;z-index:1}}
+    .frame:before,.frame:after{{content:'{motif}';position:absolute;left:0;right:0;color:{accent};font-size:16px;letter-spacing:7px;opacity:.82}}
     .frame:before{{top:6mm}}.frame:after{{bottom:6mm}}
     .logo{{max-width:22mm;max-height:22mm;object-fit:contain;margin:0 auto 3mm;display:block}}
     .ornament{{color:{accent};font-size:17px;letter-spacing:12px;margin:0 0 2mm}}
@@ -145,11 +213,20 @@ def certificate_html(record: dict) -> str:
     .award{{color:{accent};font-weight:700}}
     .footer{{position:absolute;left:24mm;right:24mm;bottom:21mm;display:flex;justify-content:space-between;font:11pt 'Segoe UI',Arial,sans-serif;color:#4d5c72}}
     .footer span{{min-width:58mm;border-top:1px solid #aab4c2;padding-top:3mm}}
+    .layout-ribbon .subtitle{{display:inline-block;background:{accent};color:#fff;padding:2.5mm 12mm;border-radius:2mm}}
+    .layout-corners{{border-style:none;outline:2px solid {accent};outline-offset:-10px}}.layout-corners:before,.layout-corners:after{{font-size:21px;letter-spacing:20px}}
+    .layout-lattice{{background:repeating-linear-gradient(45deg,{paper} 0 18px,{pale} 19px 20px,{paper} 21px 38px)}}
+    .layout-seal .ornament{{display:inline-block;border:1px solid {accent};border-radius:50%;padding:5mm 8mm;background:{pale}}}
+    .layout-night{{background:radial-gradient(ellipse at 50% 0%,{pale},transparent 65%),linear-gradient(135deg,{paper},#fff)}}
+    .layout-wave{{background:repeating-linear-gradient(170deg,{paper} 0 23mm,{pale} 23.5mm 24mm,{paper} 24.5mm 42mm)}}
+    .layout-floral .recipient{{border-bottom:3px double {accent};font-style:italic}}.layout-floral .ornament{{font-size:21px}}
+    .layout-minimal{{border-width:1px;outline:none;padding:17mm 22mm}}.layout-minimal:before,.layout-minimal:after{{display:none}}.layout-minimal .ornament{{font-size:12px;letter-spacing:18px}}
+    .layout-sun{{background:radial-gradient(circle at 50% 4%,{pale} 0 22%,transparent 50%),{paper}}}.layout-sun .ornament{{font-size:24px}}
     .print{{position:fixed;right:20px;top:18px;background:{accent};color:white;border:0;border-radius:8px;padding:12px 20px;font:14px Arial;cursor:pointer}}
     @media print{{body{{background:white}}.sheet{{margin:0;box-shadow:none}}.print{{display:none}}}}
     @media screen and (max-width:900px){{.sheet{{transform-origin:top left;transform:scale(.65);margin:8px}}}}
     </style><button class='print' onclick='window.print()'>Хэвлэх / PDF хадгалах</button>
-    <main class='sheet'><section class='frame'>{logo}<div class='ornament'>✦　✧　✦</div><h1>{html.escape(vals['title'])}</h1>
+    <main class='sheet'><section class='frame layout-{layout} style-{html.escape(str(record.get('style', 'gold')))}'>{border_svg}{logo}<div class='ornament'>{motif}</div><h1>{html.escape(vals['title'])}</h1>
     <div class='subtitle'>{html.escape(vals['subtitle'])}</div><div class='recipient'>{html.escape(vals['recipient'])}</div>
     <div class='bodytext'>{html.escape(body).replace(chr(10), '<br>')}</div>
     <div class='footer'><span>{html.escape(vals['organization'])}</span><span>{html.escape(vals['issue_date'])}</span><span>{html.escape(vals['teacher'])}</span></div>
@@ -610,8 +687,8 @@ class App(tk.Tk):
             tk.Label(win, text=label, bg=BG, fg=MUTED).grid(row=i, column=0, padx=22, pady=5, sticky="w")
             vars_[key] = tk.StringVar(value=values[key]); ttk.Entry(win, textvariable=vars_[key], width=42).grid(row=i, column=1, padx=(0, 22), pady=5)
         tk.Label(win, text="Хэв загвар", bg=BG, fg=MUTED).grid(row=4, column=0, padx=22, pady=5, sticky="w")
-        style_labels = {"Алтан хүрээ":"gold", "Хөх тэнгэр":"sky", "Улаан тамга":"ruby", "Ногоон хээ":"jade", "Нил ягаан":"violet"}
-        style_var = tk.StringVar(value=next((k for k,v in style_labels.items() if v==values["style"]), "Алтан хүрээ"))
+        style_labels = CERT_STYLE_LABELS
+        style_var = tk.StringVar(value=next((k for k,v in style_labels.items() if v==values["style"]), "Алтан Эрдэнэ"))
         ttk.Combobox(win, textvariable=style_var, state="readonly", values=list(style_labels), width=39).grid(row=4, column=1, padx=(0,22), pady=5)
         tk.Label(win, text="Тайлбарын өгүүлбэр", bg=BG, fg=MUTED).grid(row=5, column=0, padx=22, pady=5, sticky="nw")
         body_box = tk.Text(win, width=42, height=4, font=("Segoe UI", 10), wrap="word"); body_box.insert("1.0", values["body"]); body_box.grid(row=5, column=1, padx=(0,22), pady=5)
