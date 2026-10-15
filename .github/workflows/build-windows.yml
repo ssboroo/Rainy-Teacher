@@ -1,0 +1,30 @@
+name: Build Windows app
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Get source
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build executable
+        run: |
+          python -m pip install --upgrade pyinstaller
+          python -m PyInstaller --noconfirm --clean --onefile --windowed --name "БагшийнТуслах" bagshiin_tuslah.py
+      - name: Save executable artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: BagshiinTuslah-Windows
+          path: dist/БагшийнТуслах.exe
+          if-no-files-found: error
