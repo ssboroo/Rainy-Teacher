@@ -12,13 +12,18 @@ import sqlite3
 import sys
 import tempfile
 import webbrowser
+from io import BytesIO
 from datetime import date, datetime
 from pathlib import Path
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog, simpledialog
+try:
+    from PIL import Image, ImageTk
+except ImportError:
+    Image = ImageTk = None
 
 APP_NAME = "Багшийн Туслах"
-APP_VERSION = "1.4.0"
+APP_VERSION = "1.5.0"
 BG = "#F4F7FB"
 NAV = "#101B31"
 BLUE = "#3478F6"
@@ -89,6 +94,11 @@ class Store:
           id INTEGER PRIMARY KEY, exam_id INTEGER NOT NULL REFERENCES exams(id) ON DELETE CASCADE,
           position INTEGER NOT NULL, prompt TEXT NOT NULL, options TEXT NOT NULL,
           correct_index INTEGER NOT NULL, points REAL NOT NULL DEFAULT 1
+        );
+        CREATE TABLE IF NOT EXISTS presentations (
+          id INTEGER PRIMARY KEY, title TEXT NOT NULL, subject TEXT NOT NULL DEFAULT '',
+          theme TEXT NOT NULL DEFAULT 'steppe', slides_json TEXT NOT NULL DEFAULT '[]',
+          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         );
         CREATE INDEX IF NOT EXISTS idx_student_class ON students(class_id);
         CREATE INDEX IF NOT EXISTS idx_attendance_day ON attendance(day);
@@ -164,6 +174,45 @@ CERT_STYLE_LABELS = {
     "Нил Ягаан Хилэн":"plum", "Гааны Сэрүүн":"mint", "Хааны Хөх":"navy", "Хүрэл Тамга":"bronze", "Сувдан Гэгээ":"pearl",
 }
 
+PRESENTATION_THEMES = {
+    "steppe": {"name":"Талын хөх · Монгол хээ", "accent":"#1C5D9D", "bg":"#F5F8FC", "ink":"#102B48", "soft":"#DCEAF7", "mode":"steppe"},
+    "gold": {"name":"Алтан эрдэм", "accent":"#A87819", "bg":"#FCF8EE", "ink":"#342711", "soft":"#F1E4C4", "mode":"classic"},
+    "jade": {"name":"Ногоон мэдлэг", "accent":"#197A67", "bg":"#F1FAF6", "ink":"#163B36", "soft":"#D8EEE6", "mode":"split"},
+    "coral": {"name":"Сарны ягаан", "accent":"#C4536C", "bg":"#FFF5F6", "ink":"#45232D", "soft":"#F6DDE3", "mode":"shape"},
+    "midnight": {"name":"Шөнийн тэнгэр", "accent":"#75B5FF", "bg":"#101D35", "ink":"#F5F8FF", "soft":"#263A5C", "mode":"dark"},
+    "sunrise": {"name":"Нар мандахуй", "accent":"#E27436", "bg":"#FFF7F0", "ink":"#3D291E", "soft":"#F9E0C9", "mode":"shape"},
+    "violet": {"name":"Бүтээлч сэтгэлгээ", "accent":"#7054B8", "bg":"#F7F5FF", "ink":"#292141", "soft":"#E7E0FA", "mode":"split"},
+    "minimal": {"name":"Цэвэр минимал", "accent":"#2563EB", "bg":"#FFFFFF", "ink":"#111827", "soft":"#EFF4FC", "mode":"minimal"},
+    "ocean": {"name":"Далайн эрдэм", "accent":"#1685A3", "bg":"#F1FBFD", "ink":"#12333F", "soft":"#D8F0F5", "mode":"wave"},
+    "forest": {"name":"Ойн нууц", "accent":"#66874A", "bg":"#F6F8F0", "ink":"#2D3923", "soft":"#E6ECD8", "mode":"classic"},
+}
+
+
+def presentation_html(deck: dict) -> str:
+    """Create print-ready 16:9 slides that browsers can save as a multi-page PDF."""
+    theme = PRESENTATION_THEMES.get(deck.get("theme", "steppe"), PRESENTATION_THEMES["steppe"])
+    slides = deck.get("slides", [])
+    if isinstance(slides, str):
+        try: slides = json.loads(slides)
+        except (json.JSONDecodeError, TypeError): slides = []
+    title = html.escape(str(deck.get("title", "Presentation")))
+    subject = html.escape(str(deck.get("subject", "")))
+    accent, bg, ink, soft = theme["accent"], theme["bg"], theme["ink"], theme["soft"]
+    mode = theme["mode"]
+    cover = f"""<section class='slide cover mode-{mode}'><div class='cover-mark'>RAINY TEACHER <span>•</span> СУРГАЛТЫН ТАНИЛЦУУЛГА</div><div class='cover-copy'><div class='eyebrow'>{subject or 'БАГШИЙН PRESENTATION'}</div><h1>{title}</h1><div class='cover-line'></div><p>Мэдлэгийг ойлгомжтой, сонирхолтой хүргэе.</p></div><div class='cover-foot'>БАГШИЙН ТУСЛАХ <span>01</span></div></section>"""
+    pages = []
+    for index, slide in enumerate(slides, 2):
+        stitle = html.escape(str(slide.get("title", "Шинэ слайд")))
+        points = slide.get("points", [])
+        if isinstance(points, str): points = [p.strip() for p in points.splitlines() if p.strip()]
+        bullets = "".join(f"<li><i></i><span>{html.escape(str(point))}</span></li>" for point in points if str(point).strip())
+        pages.append(f"<section class='slide content-slide mode-{mode}'><div class='topline'><b>RAINY TEACHER</b><span>{subject}</span></div><div class='slide-kicker'>ХИЧЭЭЛИЙН ТАНИЛЦУУЛГА</div><h2>{stitle}</h2><div class='rule'></div><ul>{bullets}</ul><div class='bottomline'><span>{title}</span><b>{index:02d}</b></div></section>")
+    if not pages:
+        pages.append("<section class='slide content-slide'><div class='topline'><b>RAINY TEACHER</b><span></span></div><div class='slide-kicker'>ЭХЛЭХЭД БЭЛЭН</div><h2>Эхний слайдаа нэмээрэй</h2><div class='rule'></div><ul><li><i></i><span>Слайдын гарчиг болон гол санаагаа оруулна уу.</span></li></ul><div class='bottomline'><span>Танилцуулга</span><b>02</b></div></section>")
+    return f"""<!doctype html><html lang='mn'><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>{title} · Rainy Teacher</title><style>
+    *{{box-sizing:border-box}}@page{{size:13.333in 7.5in;margin:0}}body{{margin:0;background:#e9edf4;color:{ink};font-family:'Segoe UI','Arial',sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}}.toolbar{{position:fixed;z-index:9;top:18px;right:22px}}.toolbar button{{border:0;border-radius:10px;background:{accent};color:#fff;padding:12px 18px;font-weight:700;box-shadow:0 6px 20px #0002;cursor:pointer}}.slide{{width:13.333in;height:7.5in;margin:24px auto;background:{bg};position:relative;overflow:hidden;padding:.68in .82in;box-shadow:0 10px 38px #182b4630;page-break-after:always;break-after:page}}.slide:last-of-type{{page-break-after:auto;break-after:auto}}.cover{{background:radial-gradient(ellipse at 82% 15%,{soft} 0 19%,transparent 19.2%),linear-gradient(125deg,{bg} 0 63%,{soft} 63% 100%);display:flex;flex-direction:column;justify-content:space-between}}.cover:before{{content:'';position:absolute;width:4.8in;height:4.8in;border:1px solid {accent}55;border-radius:50%;right:-1.2in;bottom:-2.5in;box-shadow:0 0 0 18px {bg}66,0 0 0 19px {accent}35,0 0 0 42px {bg}40,0 0 0 43px {accent}22}}.cover-mark,.topline{{position:relative;display:flex;justify-content:space-between;align-items:center;font-size:10pt;letter-spacing:2px;color:{accent};font-weight:700}}.cover-mark span{{font-size:20pt}}.cover-copy{{position:relative;max-width:8.7in;margin-top:-.12in}}.eyebrow,.slide-kicker{{font-size:11pt;letter-spacing:3px;color:{accent};font-weight:700;text-transform:uppercase}}h1{{font-size:42pt;line-height:1.14;margin:.24in 0;color:{ink};max-width:8.5in}}.cover-line,.rule{{width:1.2in;height:5px;background:{accent};border-radius:5px}}.cover-copy p{{font-size:17pt;color:{ink};opacity:.72;margin-top:.25in}}.cover-foot,.bottomline{{position:relative;display:flex;justify-content:space-between;border-top:1px solid {accent}44;padding-top:12px;color:{ink};opacity:.7;font-size:10pt;letter-spacing:1px}}.content-slide{{background:linear-gradient(120deg,{bg}, {bg} 75%,{soft})}}.content-slide:before{{content:'';position:absolute;left:0;top:0;bottom:0;width:14px;background:{accent}}}.content-slide:after{{content:'';position:absolute;right:.55in;top:.55in;width:.22in;height:.22in;border:2px solid {accent}77;transform:rotate(45deg)}}.mode-steppe.cover:after{{content:'';position:absolute;left:.5in;top:1.35in;width:.34in;height:4.2in;border-left:2px solid {accent}66;border-right:2px solid {accent}66;background:repeating-linear-gradient(0deg,transparent 0 .16in,{accent}55 .17in .19in,transparent .2in .34in)}}.mode-classic.cover{{outline:2px solid {accent}66;outline-offset:-.22in}}.mode-split .cover-copy{{border-left:7px solid {accent};padding-left:.34in}}.mode-shape.cover:before{{width:5.4in;height:5.4in;right:-1.8in;bottom:-2.8in}}.mode-dark.content-slide:before{{width:.12in}}.mode-dark .cover-copy p{{opacity:.84}}.mode-minimal.cover:before,.mode-minimal.cover:after{{display:none}}.mode-minimal.content-slide:before{{width:4px}}.mode-wave.cover:before{{height:2.3in;width:7in;border:0;border-radius:55% 45% 0 0;background:{soft};right:-.4in;bottom:-1.6in}}.mode-wave.cover:after{{content:'';position:absolute;right:-.35in;bottom:.65in;width:7in;height:1.6in;border-top:3px solid {accent}66;border-radius:55% 50% 0 0;transform:rotate(-7deg)}}.topline{{padding-bottom:15px;border-bottom:1px solid {accent}44}}.slide-kicker{{margin-top:.62in;font-size:9pt}}h2{{font-size:32pt;line-height:1.16;margin:.18in 0 .24in;color:{ink}}}.rule{{width:.85in;height:4px}}ul{{list-style:none;padding:0;margin:.38in 0 0;max-width:10.2in}}li{{display:flex;align-items:flex-start;gap:18px;margin:0 0 .2in;font-size:20pt;line-height:1.35;color:{ink}}}li i{{flex:0 0 11px;height:11px;border-radius:50%;background:{accent};margin-top:12px;box-shadow:0 0 0 6px {soft}}}.bottomline{{position:absolute;left:.82in;right:.82in;bottom:.48in}}.bottomline b{{color:{accent};opacity:1}}@media screen{{body{{padding:1px}}}}@media print{{body{{background:white}}.slide{{margin:0;box-shadow:none}}.toolbar{{display:none}}}}
+    </style><div class='toolbar'><button onclick='window.print()'>PDF болгон хадгалах / хэвлэх</button></div>{cover}{''.join(pages)}</html>"""
+
 
 MONGOLIAN_PATTERN_PATHS = {
     # Angular continuous knots inspired by ulzii and alhan khее.
@@ -205,14 +254,14 @@ def certificate_html(record: dict) -> str:
         logo = f"<img class='logo' src='data:{html.escape(logo_mime)};base64,{base64.b64encode(logo_bytes).decode('ascii')}'>"
     return f"""<!doctype html><html lang='mn'><meta charset='utf-8'><title>{html.escape(vals['title'])} · {html.escape(vals['recipient'])}</title>
     <style>
-    @page{{size:A4 landscape;margin:0}}*{{box-sizing:border-box}}body{{margin:0;background:#e9edf3;color:#27344a;font-family:'Georgia','Times New Roman',serif}}
+    @page{{size:A4 landscape;margin:0}}*{{box-sizing:border-box}}body{{margin:0;background:#e9edf3;color:#27344a;font-family:'Segoe UI','Noto Serif',Georgia,'Times New Roman',serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}}
     .sheet{{width:297mm;height:210mm;margin:12px auto;padding:12mm;background:{paper};position:relative;overflow:hidden;box-shadow:0 8px 36px #9aa5b5}}
     .frame{{height:100%;border:3px {border} {accent};outline:1px solid {accent};outline-offset:-9px;padding:12mm 17mm;text-align:center;position:relative;background:radial-gradient(ellipse at 50% 0%,{pale} 0,transparent 42%),{paper}}}
     .mongol-border{{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}}
     .frame>:not(.mongol-border){{position:relative;z-index:1}}
     .frame:before,.frame:after{{content:'{motif}';position:absolute;left:0;right:0;color:{accent};font-size:16px;letter-spacing:7px;opacity:.82}}
     .frame:before{{top:6mm}}.frame:after{{bottom:6mm}}
-    .logo{{max-width:22mm;max-height:22mm;object-fit:contain;margin:0 auto 3mm;display:block}}
+    .logo{{max-width:25mm;max-height:23mm;object-fit:contain;margin:0 auto 3mm;display:block}}
     .ornament{{color:{accent};font-size:17px;letter-spacing:12px;margin:0 0 2mm}}
     h1{{color:{accent};font-size:30pt;letter-spacing:5px;margin:2mm 0 1mm;font-weight:700}}
     .subtitle{{color:#627086;font-family:'Segoe UI',Arial,sans-serif;font-size:12pt;letter-spacing:2px;text-transform:uppercase;margin:2mm 0 7mm}}
@@ -310,7 +359,7 @@ class App(tk.Tk):
         brand = tk.Frame(self.sidebar, bg=NAV)
         brand.pack(fill="x", padx=22, pady=(25, 6))
         try:
-            self.brand_icon = tk.PhotoImage(file=str(resource_path("assets/rainy_teacher_mark.png"))).subsample(4, 4)
+            self.brand_icon = tk.PhotoImage(file=str(resource_path("assets/rainy_teacher_mark.png"))).subsample(8, 8)
             tk.Label(brand, image=self.brand_icon, bg=NAV).pack(side="left", padx=(0, 11))
         except tk.TclError:
             self.brand_icon = None
@@ -323,22 +372,29 @@ class App(tk.Tk):
 
         self.nav_buttons = {}
         sections = [
-            ("ЕРӨНХИЙ", [("Нүүр", "⌂")]),
-            ("СУРАЛЦАГЧ", [("Сурагчид", "♙"), ("Ирц", "✓"), ("Дүн", "▤")]),
-            ("БИЧИГ БАРИМТ", [("Өргөмжлөл", "✦"), ("Шалгалтын материал", "✎"), ("Тайлан ба хэвлэх", "▧")]),
+            ("ЕРӨНХИЙ", [("Нүүр", "home")]),
+            ("СУРАЛЦАГЧ", [("Сурагчид", "students"), ("Ирц", "attendance"), ("Дүн", "grades")]),
+            ("БИЧИГ БАРИМТ", [("Өргөмжлөл", "award"), ("Шалгалтын материал", "exam"), ("Танилцуулга", "slides"), ("Тайлан ба хэвлэх", "print")]),
         ]
         for section, items in sections:
             tk.Label(self.sidebar, text=section, bg=NAV, fg="#7485A0",
                      font=("Segoe UI", 8, "bold")).pack(anchor="w", padx=25, pady=(8, 8))
             for label, icon in items:
+                row = tk.Frame(self.sidebar, bg=NAV, cursor="hand2")
+                row.pack(fill="x", padx=12, pady=2)
+                glyph = tk.Canvas(row, width=22, height=22, bg=NAV, highlightthickness=0)
+                glyph.pack(side="left", padx=(15, 10), pady=9)
                 button = tk.Button(
-                    self.sidebar, text=f"  {icon}     {label}", anchor="w", relief="flat", bd=0,
+                    row, text=label, anchor="w", relief="flat", bd=0,
                     bg=NAV, fg="#C8D2E1", activebackground="#1E3150", activeforeground=WHITE,
                     font=("Segoe UI", 10, "bold" if label == self.page else "normal"),
-                    padx=18, pady=12, command=lambda page=label: self.show_page(page), cursor="hand2"
+                    padx=0, pady=12, command=lambda page=label: self.show_page(page), cursor="hand2"
                 )
-                button.pack(fill="x", padx=12, pady=2)
-                self.nav_buttons[label] = button
+                button.pack(side="left", fill="x", expand=True)
+                row.bind("<Button-1>", lambda _event, page=label: self.show_page(page))
+                glyph.bind("<Button-1>", lambda _event, page=label: self.show_page(page))
+                self.nav_buttons[label] = (row, glyph, button, icon)
+                self._draw_nav_icon(glyph, icon, label == self.page)
 
         tk.Frame(self.sidebar, bg="#2B3B55", height=1).pack(fill="x", padx=22, pady=(18, 12))
         self._button(self.sidebar, "↓   Нөөц хуулбар", self.backup, False).pack(fill="x", padx=14, pady=(0, 14))
@@ -387,8 +443,14 @@ class App(tk.Tk):
     def show_page(self, page: str):
         self.page = page
         self.page_title.config(text=page)
-        for name, b in self.nav_buttons.items():
-            b.config(bg="#263956" if name == page else NAV, fg=WHITE if name == page else "#D5DEED")
+        for name, parts in self.nav_buttons.items():
+            row, glyph, button, icon = parts
+            active = name == page
+            row.config(bg="#263956" if active else NAV)
+            glyph.config(bg="#263956" if active else NAV)
+            button.config(bg="#263956" if active else NAV, fg=WHITE if active else "#D5DEED",
+                          font=("Segoe UI", 10, "bold" if active else "normal"))
+            self._draw_nav_icon(glyph, icon, active)
         for child in self.body.winfo_children(): child.destroy()
         if page == "Нүүр": self._dashboard()
         elif page == "Сурагчид": self._students_page()
@@ -396,7 +458,49 @@ class App(tk.Tk):
         elif page == "Дүн": self._grades_page()
         elif page == "Өргөмжлөл": self._certificates_page()
         elif page == "Шалгалтын материал": self._exams_page()
+        elif page == "Танилцуулга": self._presentations_page()
         else: self._reports_page()
+
+    def _draw_nav_icon(self, canvas, kind, active=False):
+        """Draw crisp sidebar icons from lines and shapes; avoid missing emoji glyphs."""
+        canvas.delete("all")
+        color = "#7FE0D2" if active else "#9DADC3"
+        shape_opts = {"outline": color, "width": 1.8}
+        line_opts = {"fill": color, "width": 1.8, "capstyle": "round", "joinstyle": "round"}
+        if kind == "home":
+            canvas.create_line(3, 10, 11, 3, 19, 10, **line_opts)
+            canvas.create_line(5, 9, 5, 19, 17, 19, 17, 9, **line_opts)
+            canvas.create_rectangle(9, 13, 13, 19, outline=color, width=1.5)
+        elif kind == "students":
+            canvas.create_oval(7, 3, 14, 10, **shape_opts)
+            canvas.create_arc(3, 10, 18, 22, start=0, extent=180, style="arc", **shape_opts)
+            canvas.create_oval(15, 5, 20, 10, outline=color, width=1.5)
+        elif kind == "attendance":
+            canvas.create_oval(3, 3, 19, 19, **shape_opts)
+            canvas.create_line(6, 11, 9, 14, 16, 7, **line_opts)
+        elif kind == "grades":
+            canvas.create_rectangle(4, 3, 18, 20, **shape_opts)
+            for y in (8, 12, 16):
+                canvas.create_line(7, y, 10, y, **line_opts)
+                canvas.create_line(12, y, 15, y, **line_opts)
+        elif kind == "award":
+            canvas.create_polygon(11, 2, 13, 7, 19, 8, 15, 12, 16, 18, 11, 15, 6, 18, 7, 12, 3, 8, 9, 7, fill="", **shape_opts)
+            canvas.create_line(8, 16, 7, 21, 11, 19, 15, 21, 14, 16, **line_opts)
+        elif kind == "exam":
+            canvas.create_rectangle(5, 3, 18, 20, **shape_opts)
+            for y in (8, 12, 16):
+                canvas.create_rectangle(7, y-1, 9, y+1, outline=color, width=1.2)
+                canvas.create_line(11, y, 16, y, **line_opts)
+        elif kind == "slides":
+            canvas.create_rectangle(3, 4, 19, 16, **shape_opts)
+            canvas.create_line(11, 16, 11, 20, **line_opts)
+            canvas.create_line(7, 20, 15, 20, **line_opts)
+            canvas.create_line(6, 13, 9, 10, 12, 12, 16, 7, **line_opts)
+        elif kind == "print":
+            canvas.create_rectangle(6, 3, 16, 8, **shape_opts)
+            canvas.create_rectangle(4, 9, 18, 16, **shape_opts)
+            canvas.create_rectangle(6, 14, 16, 20, **shape_opts)
+            canvas.create_line(8, 17, 14, 17, **line_opts)
 
     def _card(self, parent, title, value, hint, accent=BLUE):
         card = tk.Frame(parent, bg=WHITE, highlightthickness=1, highlightbackground="#E7ECF4")
@@ -768,14 +872,19 @@ class App(tk.Tk):
         subtitle=row["subtitle"] or "Амжилтаа үнэлүүлэв"
         scale=max(.65,min(1.0,width/560))
         title_y=height*.30
-        if row["logo"] and row["logo_mime"]=="image/png" and width>340:
+        if row["logo"] and width>340:
             try:
-                self.preview_logo_photo=tk.PhotoImage(data=base64.b64encode(row["logo"]).decode("ascii"),format="png")
-                factor=max(1, int(max(self.preview_logo_photo.width()/34,self.preview_logo_photo.height()/34)))
-                self.preview_logo_photo=self.preview_logo_photo.subsample(factor,factor)
+                if Image and ImageTk:
+                    image=Image.open(BytesIO(row["logo"])).convert("RGBA")
+                    image.thumbnail((110,52),Image.Resampling.LANCZOS)
+                    self.preview_logo_photo=ImageTk.PhotoImage(image)
+                else:
+                    self.preview_logo_photo=tk.PhotoImage(data=base64.b64encode(row["logo"]).decode("ascii"),format="png")
+                    factor=max(1, int(max(self.preview_logo_photo.width()/110,self.preview_logo_photo.height()/52)))
+                    self.preview_logo_photo=self.preview_logo_photo.subsample(factor,factor)
                 canvas.create_image(width/2,height*.19,image=self.preview_logo_photo)
                 title_y=height*.34
-            except tk.TclError:
+            except (tk.TclError, OSError, ValueError):
                 self.preview_logo_photo=None
         canvas.create_text(width/2,title_y,text=title,fill=accent,
                            font=("Georgia",max(10,int(19*scale)),"bold"),width=width*.78)
@@ -1084,6 +1193,155 @@ class App(tk.Tk):
         filename="hariult" if answer_key else "shalgalt"
         path=Path(tempfile.gettempdir())/f"bagsh_{filename}_{eid}_{datetime.now().strftime('%Y%m%d%H%M%S')}.html"
         path.write_text(content,encoding="utf-8");webbrowser.open(path.as_uri())
+
+    def _presentations_page(self):
+        self._section(self.body, "Presentation студи", "10 өнгө төрхөөс сонгоод хичээлийн слайдаа бэлдэж, PDF болгон хадгална.")
+        hero=tk.Frame(self.body,bg=NAV,padx=22,pady=17);hero.pack(fill="x",pady=(0,14))
+        tk.Label(hero,text="Хичээлээ гоё танилцуул",bg=NAV,fg=WHITE,font=("Segoe UI",15,"bold")).pack(anchor="w")
+        tk.Label(hero,text="Загвар сонгох · Слайдын агуулга бичих · Хэвлэх цонхоор PDF гаргах",bg=NAV,fg="#B8C8DC",font=("Segoe UI",9)).pack(anchor="w",pady=(4,0))
+        controls=tk.Frame(self.body,bg=BG);controls.pack(fill="x",pady=(0,10))
+        self._button(controls,"＋ Шинэ presentation",lambda:self.open_presentation_editor()).pack(side="left")
+        self._button(controls,"Сонгосныг засах",self.edit_selected_presentation,False).pack(side="left",padx=8)
+        self._button(controls,"PDF / хэвлэх",self.print_selected_presentation,False).pack(side="left")
+        self._button(controls,"Устгах",self.delete_selected_presentation,False).pack(side="right")
+        list_frame=tk.Frame(self.body,bg=WHITE,highlightthickness=1,highlightbackground=BORDER);list_frame.pack(fill="both",expand=True)
+        self.presentation_tree=ttk.Treeview(list_frame,columns=("id","title","subject","theme","slides","updated"),show="headings",height=12)
+        for key,label,width in [("id","№",50),("title","Presentation-ийн нэр",300),("subject","Хичээл / сэдэв",190),("theme","Загвар",230),("slides","Слайд",70),("updated","Шинэчилсэн",150)]:
+            self.presentation_tree.heading(key,text=label);self.presentation_tree.column(key,width=width,anchor="w")
+        scroll=ttk.Scrollbar(list_frame,orient="vertical",command=self.presentation_tree.yview);self.presentation_tree.configure(yscrollcommand=scroll.set)
+        self.presentation_tree.pack(side="left",fill="both",expand=True,padx=(8,0),pady=8);scroll.pack(side="right",fill="y",pady=8,padx=(0,8))
+        self.presentation_tree.bind("<Double-1>",lambda _e:self.edit_selected_presentation())
+        self._refresh_presentations()
+
+    def _refresh_presentations(self):
+        if not hasattr(self,"presentation_tree"):return
+        self.presentation_tree.delete(*self.presentation_tree.get_children())
+        for row in self.store.all("SELECT * FROM presentations ORDER BY updated_at DESC,id DESC"):
+            try: slides=json.loads(row["slides_json"] or "[]")
+            except json.JSONDecodeError: slides=[]
+            theme=PRESENTATION_THEMES.get(row["theme"],PRESENTATION_THEMES["steppe"])
+            self.presentation_tree.insert("","end",iid=str(row["id"]),values=(row["id"],row["title"],row["subject"],theme["name"],len(slides),row["updated_at"]))
+
+    def open_presentation_editor(self, presentation_id=None):
+        existing=None
+        if presentation_id:
+            found=self.store.all("SELECT * FROM presentations WHERE id=?",(presentation_id,))
+            if found:
+                existing=dict(found[0])
+        try: initial_slides=json.loads(existing["slides_json"]) if existing else []
+        except (TypeError,json.JSONDecodeError): initial_slides=[]
+        win=tk.Toplevel(self);win.title("Presentation засах" if existing else "Шинэ presentation");win.configure(bg=BG);win.geometry("1040x760");win.minsize(900,650);win.transient(self)
+        header=tk.Frame(win,bg=WHITE,padx=24,pady=16);header.pack(fill="x")
+        tk.Label(header,text="Хичээлийн presentation",bg=WHITE,fg=INK,font=("Segoe UI",17,"bold")).pack(anchor="w")
+        tk.Label(header,text="Нэг слайдын гарчиг болон гол санааг бич. ‘---’ мөрөөр дараагийн слайд эхлүүлнэ.",bg=WHITE,fg=MUTED,font=("Segoe UI",9)).pack(anchor="w",pady=(4,0))
+        body=tk.Frame(win,bg=BG);body.pack(fill="both",expand=True,padx=22,pady=18)
+        left=tk.Frame(body,bg=BG);left.pack(side="left",fill="both",expand=True,padx=(0,16))
+        right=tk.Frame(body,bg=WHITE,width=300,padx=16,pady=16,highlightthickness=1,highlightbackground=BORDER);right.pack(side="right",fill="y");right.pack_propagate(False)
+        formtop=tk.Frame(left,bg=BG);formtop.pack(fill="x")
+        title_var=tk.StringVar(value=existing["title"] if existing else "")
+        subject_var=tk.StringVar(value=existing["subject"] if existing else "")
+        tk.Label(formtop,text="Presentation-ийн нэр",bg=BG,fg=MUTED,font=("Segoe UI",8,"bold")).grid(row=0,column=0,sticky="w")
+        ttk.Entry(formtop,textvariable=title_var).grid(row=1,column=0,sticky="ew",padx=(0,10),pady=(4,10))
+        tk.Label(formtop,text="Хичээл / сэдэв",bg=BG,fg=MUTED,font=("Segoe UI",8,"bold")).grid(row=0,column=1,sticky="w")
+        ttk.Entry(formtop,textvariable=subject_var).grid(row=1,column=1,sticky="ew",pady=(4,10))
+        formtop.grid_columnconfigure(0,weight=1);formtop.grid_columnconfigure(1,weight=1)
+        tk.Label(left,text="ЗАГВАРАА СОНГОХ · 10 БЭЛЭН ХЭВ МАЯГ",bg=BG,fg=MUTED,font=("Segoe UI",8,"bold")).pack(anchor="w",pady=(4,6))
+        selected_theme=tk.StringVar(value=existing["theme"] if existing else "steppe")
+        themes=tk.Frame(left,bg=BG);themes.pack(fill="x",pady=(0,10))
+        preview=tk.Canvas(right,width=268,height=164,highlightthickness=0);preview.pack(fill="x",pady=(0,14))
+        preview_title=tk.Label(right,text="Слайдын нүүр",bg=WHITE,fg=INK,font=("Segoe UI",11,"bold"));preview_title.pack(anchor="w")
+        preview_text=tk.Label(right,text="Сонгосон загвараа энд харна",bg=WHITE,fg=MUTED,font=("Segoe UI",8),wraplength=260,justify="left");preview_text.pack(anchor="w",pady=(5,14))
+        count_label=tk.Label(right,text=f"{len(initial_slides)} слайд",bg="#F3F6FB",fg=INK,font=("Segoe UI",9,"bold"),padx=10,pady=7);count_label.pack(anchor="w")
+        tk.Label(right,text="ЗАГВАРЫН БҮРЭЛДЭХҮҮН",bg=WHITE,fg=MUTED,font=("Segoe UI",8,"bold")).pack(anchor="w",pady=(20,7))
+        for line in ("• 16:9 widescreen", "• Монгол кирилл үсэг", "• Хэвлэхэд PDF", "• Офлайн ажиллана"):
+            tk.Label(right,text=line,bg=WHITE,fg=INK,font=("Segoe UI",9)).pack(anchor="w",pady=3)
+        def draw_cover():
+            key=selected_theme.get();theme=PRESENTATION_THEMES[key]
+            preview.delete("all");w=max(preview.winfo_width(),268);h=164
+            preview.create_rectangle(0,0,w,h,fill=theme["bg"],outline=theme["accent"],width=2)
+            preview.create_rectangle(0,0,9,h,fill=theme["accent"],outline=theme["accent"])
+            preview.create_oval(w-80,-30,w+15,65,fill=theme["soft"],outline="")
+            preview.create_text(20,25,text="RAINY TEACHER  ·  СУРГАЛТ",anchor="w",fill=theme["accent"],font=("Segoe UI",7,"bold"))
+            preview.create_text(20,78,text=(title_var.get().strip() or "Таны хичээлийн сэдэв"),anchor="w",fill=theme["ink"],font=("Segoe UI",13,"bold"),width=w-55)
+            preview.create_line(20,113,70,113,fill=theme["accent"],width=4)
+            preview.create_text(20,137,text=(subject_var.get().strip() or "ХИЧЭЭЛИЙН PRESENTATION"),anchor="w",fill=theme["ink"],font=("Segoe UI",7))
+            preview_text.config(text=theme["name"]+" · танилцуулгын нүүрний загвар")
+        def choose_theme(key):
+            selected_theme.set(key)
+            for card_key,card in theme_cards.items():card.config(highlightbackground=BLUE if card_key==key else BORDER,highlightthickness=2 if card_key==key else 1)
+            draw_cover()
+        theme_cards={}
+        for i,(key,theme) in enumerate(PRESENTATION_THEMES.items()):
+            r,c=divmod(i,5)
+            card=tk.Frame(themes,bg=WHITE,padx=8,pady=7,highlightthickness=2,highlightbackground=BORDER,cursor="hand2")
+            card.grid(row=r,column=c,sticky="nsew",padx=(0,7),pady=(0,7))
+            strip=tk.Canvas(card,width=112,height=38,bg=theme["bg"],highlightthickness=0);strip.pack(fill="x")
+            strip.create_rectangle(0,0,7,38,fill=theme["accent"],outline=theme["accent"])
+            strip.create_oval(82,-18,125,25,fill=theme["soft"],outline="")
+            tk.Label(card,text=theme["name"],bg=WHITE,fg=INK,font=("Segoe UI",7,"bold"),wraplength=120,justify="left").pack(anchor="w",pady=(4,0))
+            card.bind("<Button-1>",lambda _e,k=key:choose_theme(k))
+            for child in card.winfo_children():child.bind("<Button-1>",lambda _e,k=key:choose_theme(k))
+            themes.grid_columnconfigure(c,weight=1,uniform="theme")
+            theme_cards[key]=card
+        choose_theme(selected_theme.get() if selected_theme.get() in PRESENTATION_THEMES else "steppe")
+        title_var.trace_add("write",lambda *_:draw_cover());subject_var.trace_add("write",lambda *_:draw_cover())
+        tk.Label(left,text="СЛАЙДЫН АГУУЛГА",bg=BG,fg=MUTED,font=("Segoe UI",8,"bold")).pack(anchor="w",pady=(6,5))
+        content=tk.Text(left,height=17,font=("Segoe UI",10),wrap="word",relief="flat",bd=0,padx=12,pady=12,highlightthickness=1,highlightbackground=BORDER)
+        content.pack(fill="both",expand=True)
+        if initial_slides:
+            parts=[]
+            for slide in initial_slides:
+                parts.append(str(slide.get("title", "Слайдын гарчиг"))+"\n"+"\n".join(str(p) for p in slide.get("points",[])))
+            content.insert("1.0","\n\n---\n\n".join(parts))
+        else: content.insert("1.0","Сэдвийн тойм\nӨнөөдрийн хичээлийн зорилго\nГол ойлголт\n\n---\n\nГол ойлголт\nЭхний чухал санаа\nЖишээ болон тайлбар\n\n---\n\nДүгнэлт\nСурсан зүйлээ нэгтгэх\nАсуулт, ярилцлага")
+        def update_count(_event=None):
+            blocks=[part for part in content.get("1.0","end-1c").split("---") if part.strip()]
+            count_label.config(text=f"{len(blocks)} слайд + нүүр")
+        content.bind("<KeyRelease>",update_count)
+        actions=tk.Frame(win,bg=WHITE,padx=22,pady=13);actions.pack(fill="x")
+        self._button(actions,"Болих",win.destroy,False).pack(side="right",padx=(8,0))
+        def save_deck():
+            title=title_var.get().strip();subject=subject_var.get().strip()
+            blocks=[part.strip() for part in content.get("1.0","end-1c").split("---") if part.strip()]
+            slides=[]
+            for block in blocks:
+                lines=[line.strip() for line in block.splitlines() if line.strip()]
+                if lines:slides.append({"title":lines[0][:120],"points":lines[1:] or ["Гол санаагаа энд бичнэ үү."]})
+            if not title or not subject:
+                messagebox.showwarning("Мэдээлэл дутуу","Presentation-ийн нэр болон хичээл / сэдвийг бөглөнө үү.",parent=win);return
+            if not slides:
+                messagebox.showwarning("Слайд хоосон байна","Дор хаяж нэг слайдын гарчиг болон агуулгыг оруулна уу.",parent=win);return
+            now=datetime.now().isoformat(timespec="minutes")
+            serialized=json.dumps(slides,ensure_ascii=False)
+            if existing:
+                self.store.run("UPDATE presentations SET title=?,subject=?,theme=?,slides_json=?,updated_at=? WHERE id=?",(title,subject,selected_theme.get(),serialized,now,existing["id"]))
+            else:
+                self.store.run("INSERT INTO presentations(title,subject,theme,slides_json,updated_at) VALUES(?,?,?,?,?)",(title,subject,selected_theme.get(),serialized,now))
+            win.destroy();self._refresh_presentations()
+        self._button(actions,"Хадгалах",save_deck).pack(side="right")
+
+    def _selected_presentation(self):
+        selection=self.presentation_tree.selection() if hasattr(self,"presentation_tree") else ()
+        if not selection:
+            messagebox.showinfo("Presentation сонгоно уу","Жагсаалтаас presentation сонгоно уу.",parent=self);return None
+        rows=self.store.all("SELECT * FROM presentations WHERE id=?",(int(selection[0]),))
+        return dict(rows[0]) if rows else None
+
+    def edit_selected_presentation(self):
+        deck=self._selected_presentation()
+        if deck:self.open_presentation_editor(deck["id"])
+
+    def print_selected_presentation(self):
+        deck=self._selected_presentation()
+        if not deck:return
+        deck["slides"]=json.loads(deck["slides_json"] or "[]")
+        path=Path(tempfile.gettempdir())/f"rainy_presentation_{deck['id']}_{datetime.now().strftime('%Y%m%d%H%M%S')}.html"
+        path.write_text(presentation_html(deck),encoding="utf-8");webbrowser.open(path.as_uri())
+
+    def delete_selected_presentation(self):
+        deck=self._selected_presentation()
+        if deck and messagebox.askyesno("Устгах уу?",f"‘{deck['title']}’ presentation-ийг устгах уу?",parent=self):
+            self.store.run("DELETE FROM presentations WHERE id=?",(deck["id"],));self._refresh_presentations()
 
     def _reports_page(self):
         self._section(self.body, "Тайлан ба хэвлэх", "Тайланг хэвлэхийн өмнө урьдчилан харах цонх нээгдэнэ. Тэндээс принтер эсвэл PDF сонгоно.")
