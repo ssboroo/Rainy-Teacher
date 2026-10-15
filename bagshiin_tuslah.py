@@ -17,13 +17,14 @@ from datetime import date, datetime
 from pathlib import Path
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog, simpledialog
+from powerpoint_export import convert_pptx_to_legacy_ppt, save_certificate_pptx, save_presentation_pptx
 try:
     from PIL import Image, ImageTk
 except ImportError:
     Image = ImageTk = None
 
 APP_NAME = "Багшийн Туслах"
-APP_VERSION = "1.5.1"
+APP_VERSION = "1.6.0"
 BG = "#F4F7FB"
 NAV = "#101B31"
 BLUE = "#3478F6"
@@ -846,15 +847,17 @@ class App(tk.Tk):
                 entry.insert(0, "") if not self.cert_vars[key].get() else None
         actions = tk.Frame(form, bg=WHITE); actions.pack(fill="x", pady=(3, 0))
         self._button(actions, "Хадгалаад хэвлэх", lambda: self.save_certificate(True)).pack(fill="x", pady=(0, 7))
-        self._button(actions, "Зөвхөн хадгалах", lambda: self.save_certificate(False), False).pack(fill="x")
+        self._button(actions, "Зөвхөн хадгалах", lambda: self.save_certificate(False), False).pack(fill="x", pady=(0, 7))
+        self._button(actions, "PowerPoint файл хадгалах", self.export_current_certificate_pptx, False).pack(fill="x")
 
         saved = tk.Frame(self.body, bg=BG); saved.pack(fill="both", expand=True)
-        self._section(saved, "Хадгалсан өргөмжлөлүүд", "Хадгалсан загвараа дахин нээж хэвлэх боломжтой.")
+        self._section(saved, "Хадгалсан өргөмжлөлүүд", "Хадгалсан загвараа дахин хэвлэх эсвэл PowerPoint файл болгоно.")
         self.cert_tree = self._tree(saved, ("id", "date", "name", "award", "template"),
                                     ("№", "Огноо", "Сурагч", "Амжилт", "Загвар"), (48, 100, 180, 250, 160))
         actions = tk.Frame(saved, bg=BG); actions.pack(fill="x", pady=(7, 0))
         self._button(actions, "Сонгосныг дахин хэвлэх", self.reprint_certificate, False).pack(side="left")
-        self._button(actions, "Устгах", self.delete_certificate, False).pack(side="left", padx=8)
+        self._button(actions, "Сонгосныг PowerPoint болгох", self.export_selected_certificate_pptx, False).pack(side="left", padx=8)
+        self._button(actions, "Устгах", self.delete_certificate, False).pack(side="left")
         self._refresh_certificate_templates()
         self._refresh_saved_certificates()
 
@@ -1097,6 +1100,42 @@ class App(tk.Tk):
         row=self.store.all("SELECT * FROM certificates WHERE id=?",(int(self.cert_tree.selection()[0]),))[0]
         self._open_certificate(dict(row))
 
+    def _save_certificate_powerpoint(self, record):
+        safe_name = "".join(ch if ch.isalnum() or ch in "-_ " else "_" for ch in str(record.get("recipient", "Өргөмжлөл"))).strip() or "Өргөмжлөл"
+        target = filedialog.asksaveasfilename(parent=self, title="Өргөмжлөлийг PowerPoint файлаар хадгалах",
+            initialfile=f"{safe_name}_urgumjlul.pptx", defaultextension=".pptx",
+            filetypes=[("PowerPoint файл (*.pptx)", "*.pptx"), ("PowerPoint 97–2003 (*.ppt)", "*.ppt")])
+        if not target: return
+        path = Path(target)
+        try:
+            if path.suffix.lower() == ".ppt":
+                temp_pptx = Path(tempfile.gettempdir()) / f"rainy_certificate_{datetime.now().strftime('%Y%m%d%H%M%S%f')}.pptx"
+                try:
+                    save_certificate_pptx(record, temp_pptx, CERT_DESIGNS)
+                    convert_pptx_to_legacy_ppt(temp_pptx, path)
+                finally:
+                    temp_pptx.unlink(missing_ok=True)
+            else:
+                if path.suffix.lower() != ".pptx": path = path.with_suffix(".pptx")
+                save_certificate_pptx(record, path, CERT_DESIGNS)
+            messagebox.showinfo("Амжилттай", f"PowerPoint файл хадгалагдлаа:\n{path}", parent=self)
+        except Exception as exc:
+            messagebox.showerror("PowerPoint файл үүсгэсэнгүй", str(exc), parent=self)
+
+    def export_current_certificate_pptx(self):
+        record = self._certificate_payload()
+        if not record.get("recipient") or not record.get("achievement"):
+            messagebox.showwarning("Мэдээлэл дутуу", "Сурагчийн нэр болон амжилт/шалтгааныг оруулна уу.", parent=self); return
+        try: datetime.strptime(record["issue_date"], "%Y-%m-%d")
+        except ValueError: messagebox.showwarning("Огноо буруу", "Огноог YYYY-MM-DD хэлбэрээр оруулна уу.", parent=self); return
+        self._save_certificate_powerpoint(record)
+
+    def export_selected_certificate_pptx(self):
+        if not self.cert_tree.selection():
+            messagebox.showinfo("Сонгоно уу", "PowerPoint болгон хадгалах өргөмжлөлөө сонгоно уу.", parent=self); return
+        row = self.store.all("SELECT * FROM certificates WHERE id=?", (int(self.cert_tree.selection()[0]),))
+        if row: self._save_certificate_powerpoint(dict(row[0]))
+
     def delete_certificate(self):
         if not self.cert_tree.selection(): messagebox.showinfo("Сонгоно уу","Устгах өргөмжлөлөө сонгоно уу.",parent=self); return
         if messagebox.askyesno("Устгах уу?","Сонгосон өргөмжлөлийн бүртгэлийг устгах уу?",parent=self):
@@ -1234,13 +1273,14 @@ class App(tk.Tk):
         path.write_text(content,encoding="utf-8");webbrowser.open(path.as_uri())
 
     def _presentations_page(self):
-        self._section(self.body, "Presentation студи", "10 өнгө төрхөөс сонгоод хичээлийн слайдаа бэлдэж, PDF болгон хадгална.")
+        self._section(self.body, "Presentation студи", "10 загвараар слайдаа бэлдэж, засварлагдах PowerPoint эсвэл хэвлэх PDF болгон гаргана.")
         hero=tk.Frame(self.body,bg=NAV,padx=22,pady=17);hero.pack(fill="x",pady=(0,14))
         tk.Label(hero,text="Хичээлээ гоё танилцуул",bg=NAV,fg=WHITE,font=("Segoe UI",15,"bold")).pack(anchor="w")
         tk.Label(hero,text="Загвар сонгох · Слайдын агуулга бичих · Хэвлэх цонхоор PDF гаргах",bg=NAV,fg="#B8C8DC",font=("Segoe UI",9)).pack(anchor="w",pady=(4,0))
         controls=tk.Frame(self.body,bg=BG);controls.pack(fill="x",pady=(0,10))
         self._button(controls,"＋ Шинэ presentation",lambda:self.open_presentation_editor()).pack(side="left")
         self._button(controls,"Сонгосныг засах",self.edit_selected_presentation,False).pack(side="left",padx=8)
+        self._button(controls,"PowerPoint (.pptx) хадгалах",self.export_selected_presentation_pptx,False).pack(side="left",padx=8)
         self._button(controls,"PDF / хэвлэх",self.print_selected_presentation,False).pack(side="left")
         self._button(controls,"Устгах",self.delete_selected_presentation,False).pack(side="right")
         list_frame=tk.Frame(self.body,bg=WHITE,highlightthickness=1,highlightbackground=BORDER);list_frame.pack(fill="both",expand=True)
@@ -1376,6 +1416,33 @@ class App(tk.Tk):
         deck["slides"]=json.loads(deck["slides_json"] or "[]")
         path=Path(tempfile.gettempdir())/f"rainy_presentation_{deck['id']}_{datetime.now().strftime('%Y%m%d%H%M%S')}.html"
         path.write_text(presentation_html(deck),encoding="utf-8");webbrowser.open(path.as_uri())
+
+    def export_selected_presentation_pptx(self):
+        deck = self._selected_presentation()
+        if not deck: return
+        try: deck["slides"] = json.loads(deck["slides_json"] or "[]")
+        except (TypeError, json.JSONDecodeError): deck["slides"] = []
+        safe_name = "".join(ch if ch.isalnum() or ch in "-_ " else "_" for ch in deck["title"]).strip() or "Presentation"
+        target = filedialog.asksaveasfilename(parent=self, title="Presentation-ээ PowerPoint файлаар хадгалах",
+            initialfile=f"{safe_name}.pptx", defaultextension=".pptx",
+            filetypes=[("PowerPoint файл (*.pptx)", "*.pptx"), ("PowerPoint 97–2003 (*.ppt)", "*.ppt")])
+        if not target: return
+        path = Path(target)
+        temp_pptx = None
+        try:
+            theme = PRESENTATION_THEMES.get(deck.get("theme"), PRESENTATION_THEMES["steppe"])
+            if path.suffix.lower() == ".ppt":
+                temp_pptx = Path(tempfile.gettempdir()) / f"rainy_presentation_{datetime.now().strftime('%Y%m%d%H%M%S%f')}.pptx"
+                save_presentation_pptx(deck, temp_pptx, theme)
+                convert_pptx_to_legacy_ppt(temp_pptx, path)
+            else:
+                if path.suffix.lower() != ".pptx": path = path.with_suffix(".pptx")
+                save_presentation_pptx(deck, path, theme)
+            messagebox.showinfo("Амжилттай", f"PowerPoint файл хадгалагдлаа:\n{path}", parent=self)
+        except Exception as exc:
+            messagebox.showerror("PowerPoint файл үүсгэсэнгүй", str(exc), parent=self)
+        finally:
+            if temp_pptx: temp_pptx.unlink(missing_ok=True)
 
     def delete_selected_presentation(self):
         deck=self._selected_presentation()

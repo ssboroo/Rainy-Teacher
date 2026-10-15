@@ -3,7 +3,7 @@ chcp 65001 >nul
 setlocal
 cd /d "%~dp0"
 echo Багшийн Туслах Windows хувилбар бэлдэж байна...
-py -m pip install --upgrade pyinstaller pillow
+py -m pip install --upgrade pyinstaller pillow python-pptx pywin32
 if errorlevel 1 goto failed
 py prepare_assets.py
 if errorlevel 1 goto failed
@@ -16,11 +16,11 @@ if errorlevel 1 (
   pause
   exit /b 0
 )
-iscc /DAppVersion=1.5.1 installer.iss
+iscc /DAppVersion=1.6.0 installer.iss
 if errorlevel 1 goto failed
 echo.
 echo Амжилттай. EXE: dist\RainyTeacher.exe
-echo Суулгагч: dist-installer\RainyTeacher-Setup-1.5.1.exe
+echo Суулгагч: dist-installer\RainyTeacher-Setup-1.6.0.exe
 pause
 exit /b 0
 :failed

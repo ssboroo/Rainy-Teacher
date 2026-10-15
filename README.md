@@ -9,10 +9,11 @@
 - **Ангийн бүртгэл:** олон анги, сурагчдын мэдээлэл, хайлт, CSV импорт/экспорт
 - **Ирц:** өдрөөр тэмдэглэх, сарын тайлан гаргах
 - **Дүн:** даалгавар, шалгалтын оноо болон хичээл тус бүрийн дундаж
-- **Өргөмжлөл:** Монгол хэв маягтай 20 загвар, хөх-алтлаг хээтэй A4 загвар, гарчиг/өнгө/бичвэр засах, PNG/JPG лого нэмэх, PDF болгон хадгалах
+- **Өргөмжлөл:** Монгол хэв маягтай 20 загвар, хөх-алтлаг хээтэй A4 загвар, гарчиг/өнгө/бичвэр засах, PNG/JPG лого нэмэх, PDF хэвлэх болон засварлагдах PPTX экспортлох
 - **Шууд preview:** загварын сангаас 20 өргөмжлөлийг хээ, өнгөтэй нь харж сонгох
 - **Шалгалтын материал:** олон сонголттой асуулт, зөв хариулт, оноо; хадгалах, дараа нь засах
-- **Presentation студи:** Монгол хэлтэй 10 Canva маягийн загвар, слайд үүсгэж хадгалах, 16:9 PDF болгон хэвлэх
+- **Presentation студи:** Монгол хэлтэй 10 Canva маягийн загвар, слайд үүсгэж хадгалах, 16:9 PowerPoint PPTX болон PDF болгон гаргах; PPTX доторх текст, дүрс засварлагдана
+- **Хуучин PPT:** Microsoft PowerPoint/Office суусан Windows дээр 97–2003 `.ppt` болгон хөрвүүлж хадгална
 - **Хэвлэх:** жагсаалт, тайлан, сурагчийн шалгалт, хариултын түлхүүр, өргөмжлөлийг хэвлэх эсвэл PDF болгох
 - **Нөөц хуулбар:** мэдээллийг локал SQLite санд хадгалж, `.db` файл болгон нөөцлөх
 
@@ -20,15 +21,16 @@
 
 ## Windows installer
 
-GitHub-ийн **Actions** табаас `Rainy-Teacher-Windows` artifact-ийг татаж аваад `RainyTeacher-Setup-1.5.1.exe` суулгагчийг ажиллуулна. Суулгагч Start цэсэнд Rainy Teacher нэмнэ. Desktop shortcut-ийг сонголтоор үүсгэнэ.
+GitHub-ийн **Actions** табаас `Rainy-Teacher-Windows-1.6.0` artifact-ийг татаж аваад `RainyTeacher-Setup-1.6.0.exe` суулгагчийг ажиллуулна. Суулгагч Start цэсэнд Rainy Teacher нэмнэ. Desktop shortcut-ийг сонголтоор үүсгэнэ.
 
-Эх кодоос Windows дээр build хийхдээ Python 3.10+ болон Inno Setup суулгаад `build_windows.bat` ажиллуулна. Энэ нь `dist\RainyTeacher.exe` portable app болон `dist-installer\RainyTeacher-Setup-1.5.1.exe` installer үүсгэнэ.
+Эх кодоос Windows дээр build хийхдээ Python 3.10+ болон Inno Setup суулгаад `build_windows.bat` ажиллуулна. Энэ нь `dist\RainyTeacher.exe` portable app болон `dist-installer\RainyTeacher-Setup-1.6.0.exe` installer үүсгэнэ. `.pptx` экспортод `python-pptx`, хуучин `.ppt` хөрвүүлэлтэд Microsoft PowerPoint/Office шаардлагатай.
 
 ## Windows дээр ажиллуулах
 
 Python 3.10+ суулгасан компьютер дээр:
 
 ```bat
+py -m pip install pillow python-pptx
 py bagshiin_tuslah.py
 ```
 
