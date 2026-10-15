@@ -79,14 +79,14 @@ def _certificate_default_design(row, accent, pale, paper):
         {"type":"text","text":"✦   ❖","x":130,"y":39,"w":220,"h":34,"font":"Georgia","font_size":19,"color":gold,"bold":True,"align":"center"},
         {"type":"text","text":"❖   ✦","x":610,"y":39,"w":220,"h":34,"font":"Georgia","font_size":19,"color":gold,"bold":True,"align":"center"},
         {"type":"text","text":"АМЖИЛТЫГ ЭРХЭМЛЭН","x":310,"y":75,"w":340,"h":24,"font":"Segoe UI","font_size":10,"color":accent,"bold":True,"align":"center"},
-        {"type":"text","text":row["title"],"x":90,"y":109,"w":780,"h":59,"font":"Georgia","font_size":34,"color":accent,"bold":True,"align":"center"},
+        {"type":"text","text":"{title}","x":90,"y":109,"w":780,"h":59,"font":"Georgia","font_size":34,"color":accent,"bold":True,"align":"center"},
         {"type":"rect","x":394,"y":177,"w":172,"h":2,"fill":gold},
-        {"type":"text","text":row["subtitle"],"x":130,"y":188,"w":700,"h":35,"font":"Segoe UI","font_size":15,"color":"#627086","bold":False,"align":"center"},
+        {"type":"text","text":"{subtitle}","x":130,"y":188,"w":700,"h":35,"font":"Segoe UI","font_size":15,"color":"#627086","bold":False,"align":"center"},
         {"type":"ellipse","x":474,"y":232,"w":12,"h":12,"fill":gold},
         {"type":"text","text":"{name}","x":100,"y":252,"w":760,"h":60,"font":"Georgia","font_size":31,"color":ink,"bold":True,"align":"center"},
         {"type":"rect","x":300,"y":321,"w":360,"h":2,"fill":gold},
         {"type":"text","text":"❖","x":457,"y":309,"w":46,"h":30,"font":"Georgia","font_size":17,"color":accent,"bold":True,"align":"center"},
-        {"type":"text","text":row["body"],"x":145,"y":352,"w":670,"h":103,"font":"Segoe UI","font_size":17,"color":"#43516A","bold":False,"align":"center"},
+        {"type":"text","text":"{body}","x":145,"y":352,"w":670,"h":103,"font":"Segoe UI","font_size":17,"color":"#43516A","bold":False,"align":"center"},
         {"type":"rect","x":170,"y":517,"w":620,"h":1,"fill":"#D7C79F"},
         {"type":"text","text":"{organization}","x":95,"y":536,"w":250,"h":38,"font":"Segoe UI","font_size":13,"color":ink,"bold":True,"align":"center"},
         {"type":"text","text":"{teacher}","x":355,"y":536,"w":250,"h":38,"font":"Segoe UI","font_size":13,"color":ink,"bold":True,"align":"center"},
@@ -381,7 +381,10 @@ def certificate_html(record: dict) -> str:
                 "{achievement}":str(record.get("achievement") or "Амжилтын тайлбар"),
                 "{organization}":str(record.get("organization") or "Сургуулийн нэр"),
                 "{teacher}":str(record.get("teacher") or "Багшийн нэр"),
-                "{date}":str(record.get("issue_date") or "2026-10-15")}
+                "{date}":str(record.get("issue_date") or "2026-10-15"),
+                "{title}":str(record.get("title") or "ӨРГӨМЖЛӨЛ"),
+                "{subtitle}":str(record.get("subtitle") or "Амжилтаа үнэлүүлэв"),
+                "{body}":str(record.get("body") or "{achievement}").replace("{name}",str(record.get("recipient") or "Сурагчийн нэр")).replace("{achievement}",str(record.get("achievement") or "Амжилтын тайлбар"))}
         nodes=[]
         for el in custom["elements"]:
             try:
@@ -1019,7 +1022,9 @@ class App(tk.Tk):
             self.preview_logo_photos=[]
             values={"{name}":recipient or "Сурагчийн нэр","{achievement}":achievement or "Амжилтын тайлбар",
                     "{organization}":organization or "Сургуулийн нэр","{teacher}":teacher or "Багшийн нэр",
-                    "{date}":issue_date or "2026-10-15"}
+                    "{date}":issue_date or "2026-10-15", "{title}":row.get("title") or "ӨРГӨМЖЛӨЛ",
+                    "{subtitle}":row.get("subtitle") or "Амжилтаа үнэлүүлэв",
+                    "{body}":(row.get("body") or "{achievement}").replace("{name}",recipient or "Сурагчийн нэр").replace("{achievement}",achievement or "Амжилтын тайлбар")}
             for el in custom["elements"]:
                 try:
                     x,y,w,h=[float(el.get(k,d)) for k,d in (("x",0),("y",0),("w",100),("h",40))]
