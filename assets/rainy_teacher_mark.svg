@@ -18,7 +18,7 @@
   </defs>
   <rect x="16" y="16" width="480" height="480" rx="116" fill="url(#bg)"/>
   <circle cx="393" cy="126" r="56" fill="#29466c" opacity=".55"/>
-  <g filter="url(#shadow)">
+  <g>
     <path d="M93 210c56-18 108-8 163 22v167c-55-30-107-40-163-22z" fill="url(#page)"/>
     <path d="M419 210c-56-18-108-8-163 22v167c55-30 107-40 163-22z" fill="#f2f6fd"/>
     <path d="M256 232v167" fill="none" stroke="#79a0cf" stroke-width="9" stroke-linecap="round"/>
