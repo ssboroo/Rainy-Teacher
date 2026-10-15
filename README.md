@@ -10,6 +10,7 @@
 - **Ирц:** өдрөөр тэмдэглэх, сарын тайлан гаргах
 - **Дүн:** даалгавар, шалгалтын оноо болон хичээл тус бүрийн дундаж
 - **Өргөмжлөл:** Монгол хэв маягтай 20 загвар, гарчиг/өнгө/бичвэр засах, сургуулийн лого нэмэх
+- **Шууд preview:** загварын сангаас 20 өргөмжлөлийг хээ, өнгөтэй нь харж сонгох
 - **Шалгалтын материал:** олон сонголттой асуулт, зөв хариулт, оноо; хадгалах, дараа нь засах
 - **Хэвлэх:** жагсаалт, тайлан, сурагчийн шалгалт, хариултын түлхүүр, өргөмжлөлийг хэвлэх эсвэл PDF болгох
 - **Нөөц хуулбар:** мэдээллийг локал SQLite санд хадгалж, `.db` файл болгон нөөцлөх
@@ -18,9 +19,9 @@
 
 ## Windows installer
 
-GitHub-ийн **Actions** табаас `Rainy-Teacher-Windows` artifact-ийг татаж аваад `RainyTeacher-Setup-1.3.0.exe` суулгагчийг ажиллуулна. Суулгагч Start цэсэнд Rainy Teacher нэмнэ. Desktop shortcut-ийг сонголтоор үүсгэнэ.
+GitHub-ийн **Actions** табаас `Rainy-Teacher-Windows` artifact-ийг татаж аваад `RainyTeacher-Setup-1.4.0.exe` суулгагчийг ажиллуулна. Суулгагч Start цэсэнд Rainy Teacher нэмнэ. Desktop shortcut-ийг сонголтоор үүсгэнэ.
 
-Эх кодоос Windows дээр build хийхдээ Python 3.10+ болон Inno Setup суулгаад `build_windows.bat` ажиллуулна. Энэ нь `dist\RainyTeacher.exe` portable app болон `dist-installer\RainyTeacher-Setup-1.3.0.exe` installer үүсгэнэ.
+Эх кодоос Windows дээр build хийхдээ Python 3.10+ болон Inno Setup суулгаад `build_windows.bat` ажиллуулна. Энэ нь `dist\RainyTeacher.exe` portable app болон `dist-installer\RainyTeacher-Setup-1.4.0.exe` installer үүсгэнэ.
 
 ## Windows дээр ажиллуулах
 
