@@ -139,6 +139,24 @@ class PowerPointExportTests(unittest.TestCase):
         self.assertTrue(all(any(el.get("font")=="Georgia" and el.get("align")=="center" for el in design["elements"])
                             for design in designs))
 
+    def test_seeded_award_template_keeps_basic_text_edits_live_in_exports(self):
+        store=Store(self.folder/"seeded-template.db")
+        self.addCleanup(store.db.close)
+        record=dict(store.all("SELECT * FROM certificate_templates ORDER BY id LIMIT 1")[0])
+        record.update({"recipient":"Бат-Эрдэнэ","achievement":"математикийн олимпиадад түрүүлсэн",
+                       "title":"ОНЦГОЙ ШАГНАЛ","subtitle":"Улсын аварга сурагч",
+                       "body":"{name} {achievement} амжилт гаргалаа.","teacher":"Б. Саруул",
+                       "organization":"Эрдмийн оргил сургууль","issue_date":"2026-10-15"})
+        rendered=certificate_html(record)
+        self.assertIn("ОНЦГОЙ ШАГНАЛ",rendered)
+        self.assertIn("Улсын аварга сурагч",rendered)
+        self.assertIn("Бат-Эрдэнэ математикийн олимпиадад түрүүлсэн амжилт гаргалаа.",rendered)
+        target=self.folder/"seeded.pptx"
+        save_certificate_pptx(record,target,{"gold":{"colors":("#A77920","#F5E8BC","#FFFAF0")}})
+        text="\n".join(shape.text for shape in Presentation(target).slides[0].shapes if shape.has_text_frame)
+        self.assertIn("ОНЦГОЙ ШАГНАЛ",text)
+        self.assertIn("Бат-Эрдэнэ математикийн олимпиадад түрүүлсэн амжилт гаргалаа.",text)
+
 
 if __name__ == "__main__":
     unittest.main()
