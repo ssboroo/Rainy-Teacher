@@ -83,6 +83,15 @@ class SlideDesignEditor:
                                      command=self.apply_properties, width=9)
         self.size_spin.pack(anchor="w")
         self.size_spin.bind("<KeyRelease>", lambda _e: self.apply_properties())
+        dims=tk.Frame(panel,bg="white");dims.pack(fill="x",pady=(10,0))
+        self.geometry_vars={key:tk.IntVar(value=0) for key in ("x","y","w","h")}
+        self.geometry_spins=[]
+        for i,(key,label,maximum) in enumerate((("x","X",960),("y","Y",self.H),("w","Өргөн",960),("h","Өндөр",self.H))):
+            tk.Label(dims,text=label,bg="white",fg="#68768B",font=("Segoe UI",8)).grid(row=(i//2)*2,column=i%2,sticky="w",padx=(0,8),pady=(0,2))
+            spin=ttk.Spinbox(dims,from_=0,to=maximum,textvariable=self.geometry_vars[key],width=8,command=self.apply_properties)
+            spin.grid(row=(i//2)*2+1,column=i%2,sticky="ew",padx=(0,8),pady=(0,5))
+            spin.bind("<KeyRelease>",lambda _e:self.apply_properties());self.geometry_spins.append(spin)
+        dims.grid_columnconfigure(0,weight=1);dims.grid_columnconfigure(1,weight=1)
         self.bold_var = tk.BooleanVar(value=False)
         tk.Checkbutton(panel, text="Тод үсэг", variable=self.bold_var, command=self.apply_properties,
                        bg="white", fg="#33415A", activebackground="white").pack(anchor="w", pady=8)
@@ -119,10 +128,14 @@ class SlideDesignEditor:
         ]
         points = slide.get("points", [])
         if isinstance(points, str): points = points.splitlines()
-        for i, point in enumerate(points[:7]):
+        for i, point in enumerate(points[:6]):
             elements.append({"type": "text", "text": "• " + str(point),
                              "x": 72, "y": 165 + i * 48, "w": 810, "h": 42,
                              "font_size": 19, "color": self.theme.get("ink", "#102B48"), "bold": False})
+        if len(points)>6:
+            elements.append({"type":"text","text":"\n".join("• "+str(point) for point in points[6:]),
+                             "x":72,"y":453,"w":810,"h":76,"font_size":15,
+                             "color":self.theme.get("ink","#102B48"),"bold":False})
         return elements
 
     def load_slide(self):
@@ -219,17 +232,24 @@ class SlideDesignEditor:
             self.text_entry.configure(state="normal")
             self.text_entry.delete("1.0", "end")
             self.text_entry.configure(state="disabled")
+        for key,var in self.geometry_vars.items():
+            try:var.set(max(0,int(float(el.get(key,0)))) if el else 0)
+            except (ValueError,TypeError):var.set(0)
+        for spin in self.geometry_spins:spin.configure(state="normal" if el else "disabled")
         color = (el or {}).get("color", (el or {}).get("fill", self.theme.get("accent", "#3478F6")))
         self.color_swatch.configure(bg=color if isinstance(color, str) else self.theme.get("accent", "#3478F6"))
 
     def apply_properties(self):
         if self.selected is None or self.selected >= len(self.elements): return
         el = self.elements[self.selected]
-        if el.get("type") != "text": return
-        el["text"] = self.text_entry.get("1.0", "end-1c")
-        try: el["font_size"] = max(8, min(96, int(self.size_var.get())))
-        except (ValueError, tk.TclError): pass
-        el["bold"] = self.bold_var.get()
+        for key,var in self.geometry_vars.items():
+            try:el[key]=int(var.get())
+            except (ValueError,tk.TclError):pass
+        if el.get("type") == "text":
+            el["text"] = self.text_entry.get("1.0", "end-1c")
+            try: el["font_size"] = max(8, min(96, int(self.size_var.get())))
+            except (ValueError, tk.TclError): pass
+            el["bold"] = self.bold_var.get()
         self.draw()
 
     def choose_color(self):
