@@ -27,7 +27,7 @@ except ImportError:
     Image = ImageTk = None
 
 APP_NAME = "Багшийн Туслах"
-APP_VERSION = "1.7.2"
+APP_VERSION = "1.7.3"
 BG = "#F4F7FB"
 NAV = "#101B31"
 BLUE = "#3478F6"
@@ -525,9 +525,9 @@ class App(tk.Tk):
         except tk.TclError:
             pass
         try:
-            self.window_icon = tk.PhotoImage(data=resource_path("assets/rainy_teacher_mark.png.b64").read_text(encoding="ascii"))
+            self.window_icon = tk.PhotoImage(file=str(resource_path("assets/rainy_teacher_mark.png")))
             self.iconphoto(True, self.window_icon)
-        except tk.TclError:
+        except (tk.TclError, OSError):
             self.window_icon = None
         self.store = Store()
         self.active_class: int | None = None

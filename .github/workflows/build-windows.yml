@@ -45,12 +45,12 @@ jobs:
       - name: Install Inno Setup
         run: choco install innosetup --no-progress -y
       - name: Build Windows installer
-        run: iscc /DAppVersion=1.7.2 installer.iss
+        run: iscc /DAppVersion=1.7.3 installer.iss
       - name: Save installer and portable app
         uses: actions/upload-artifact@v4
         with:
-          name: Rainy-Teacher-Windows-1.7.2
+          name: Rainy-Teacher-Windows-1.7.3
           path: |
-            dist-installer/RainyTeacher-Setup-1.7.2.exe
+            dist-installer/RainyTeacher-Setup-1.7.3.exe
             dist/RainyTeacher.exe
           if-no-files-found: error
