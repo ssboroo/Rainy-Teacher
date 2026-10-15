@@ -50,6 +50,63 @@ def resource_path(relative_path: str) -> Path:
     return bundle_dir / relative_path
 
 
+def _certificate_default_design(row, accent, pale, paper):
+    """Premium editable starter layout shared by preview, print, and PPTX."""
+    gold="#B58A35"; ink="#26344B"
+    # Restrained Mongolian ulzii inspired frame and a balanced award hierarchy.
+    # Each detail stays an editable vector shape in the editor and exported PPTX.
+    elements=[
+        {"type":"rect","x":20,"y":20,"w":920,"h":3,"fill":gold},
+        {"type":"rect","x":20,"y":656,"w":920,"h":3,"fill":gold},
+        {"type":"rect","x":20,"y":20,"w":3,"h":639,"fill":gold},
+        {"type":"rect","x":937,"y":20,"w":3,"h":639,"fill":gold},
+        {"type":"rect","x":30,"y":30,"w":900,"h":2,"fill":accent},
+        {"type":"rect","x":30,"y":647,"w":900,"h":2,"fill":accent},
+        {"type":"rect","x":30,"y":30,"w":2,"h":619,"fill":accent},
+        {"type":"rect","x":928,"y":30,"w":2,"h":619,"fill":accent},
+        {"type":"rect","x":43,"y":43,"w":72,"h":3,"fill":gold},
+        {"type":"rect","x":43,"y":43,"w":3,"h":72,"fill":gold},
+        {"type":"rect","x":845,"y":43,"w":72,"h":3,"fill":gold},
+        {"type":"rect","x":914,"y":43,"w":3,"h":72,"fill":gold},
+        {"type":"rect","x":43,"y":633,"w":72,"h":3,"fill":gold},
+        {"type":"rect","x":43,"y":564,"w":3,"h":72,"fill":gold},
+        {"type":"rect","x":845,"y":633,"w":72,"h":3,"fill":gold},
+        {"type":"rect","x":914,"y":564,"w":3,"h":72,"fill":gold},
+        {"type":"ellipse","x":49,"y":49,"w":14,"h":14,"fill":accent},
+        {"type":"ellipse","x":897,"y":49,"w":14,"h":14,"fill":accent},
+        {"type":"ellipse","x":49,"y":616,"w":14,"h":14,"fill":accent},
+        {"type":"ellipse","x":897,"y":616,"w":14,"h":14,"fill":accent},
+        {"type":"text","text":"✦   ❖","x":130,"y":39,"w":220,"h":34,"font":"Georgia","font_size":19,"color":gold,"bold":True,"align":"center"},
+        {"type":"text","text":"❖   ✦","x":610,"y":39,"w":220,"h":34,"font":"Georgia","font_size":19,"color":gold,"bold":True,"align":"center"},
+        {"type":"text","text":"АМЖИЛТЫГ ЭРХЭМЛЭН","x":310,"y":75,"w":340,"h":24,"font":"Segoe UI","font_size":10,"color":accent,"bold":True,"align":"center"},
+        {"type":"text","text":row["title"],"x":90,"y":109,"w":780,"h":59,"font":"Georgia","font_size":34,"color":accent,"bold":True,"align":"center"},
+        {"type":"rect","x":394,"y":177,"w":172,"h":2,"fill":gold},
+        {"type":"text","text":row["subtitle"],"x":130,"y":188,"w":700,"h":35,"font":"Segoe UI","font_size":15,"color":"#627086","bold":False,"align":"center"},
+        {"type":"ellipse","x":474,"y":232,"w":12,"h":12,"fill":gold},
+        {"type":"text","text":"{name}","x":100,"y":252,"w":760,"h":60,"font":"Georgia","font_size":31,"color":ink,"bold":True,"align":"center"},
+        {"type":"rect","x":300,"y":321,"w":360,"h":2,"fill":gold},
+        {"type":"text","text":"❖","x":457,"y":309,"w":46,"h":30,"font":"Georgia","font_size":17,"color":accent,"bold":True,"align":"center"},
+        {"type":"text","text":row["body"],"x":145,"y":352,"w":670,"h":103,"font":"Segoe UI","font_size":17,"color":"#43516A","bold":False,"align":"center"},
+        {"type":"rect","x":170,"y":517,"w":620,"h":1,"fill":"#D7C79F"},
+        {"type":"text","text":"{organization}","x":95,"y":536,"w":250,"h":38,"font":"Segoe UI","font_size":13,"color":ink,"bold":True,"align":"center"},
+        {"type":"text","text":"{teacher}","x":355,"y":536,"w":250,"h":38,"font":"Segoe UI","font_size":13,"color":ink,"bold":True,"align":"center"},
+        {"type":"text","text":"{date}","x":615,"y":536,"w":250,"h":38,"font":"Segoe UI","font_size":13,"color":ink,"bold":True,"align":"center"},
+        {"type":"text","text":"СУРГУУЛЬ / БАЙГУУЛЛАГА","x":95,"y":578,"w":250,"h":22,"font":"Segoe UI","font_size":9,"color":accent,"bold":True,"align":"center"},
+        {"type":"text","text":"БАГШИЙН ГАРЫН ҮСЭГ","x":355,"y":578,"w":250,"h":22,"font":"Segoe UI","font_size":9,"color":accent,"bold":True,"align":"center"},
+        {"type":"text","text":"ОЛГОСОН ОГНОО","x":615,"y":578,"w":250,"h":22,"font":"Segoe UI","font_size":9,"color":accent,"bold":True,"align":"center"},
+    ]
+    if row.get("logo"):
+        try:
+            logo=Image.open(BytesIO(row["logo"])).convert("RGBA");stream=BytesIO();logo.save(stream,format="PNG")
+            logo_data=stream.getvalue()
+        except Exception:logo_data=row["logo"]
+        elements.append({"type":"image","data":base64.b64encode(logo_data).decode("ascii"),"mime":"image/png","x":444,"y":25,"w":72,"h":48})
+    design={"background":paper,"elements":elements}
+    return design
+
+
+
+
 class Store:
     def __init__(self, path: Path | None = None):
         self.path = path or data_dir() / "bagshiin_tuslah.db"
@@ -141,6 +198,14 @@ class Store:
             self.db.execute("UPDATE certificate_templates SET name='Хөх Алт · Монгол хээ' WHERE name='Хааны Хөх'")
         for item in defaults:
             self.db.execute("INSERT OR IGNORE INTO certificate_templates(name,style,title,subtitle,body) VALUES(?,?,?,?,?)", item)
+        # Give all untouched built-in templates the same editable premium layout.
+        # Existing user-customized designs are left as-is.
+        rows=self.db.execute("SELECT id,style,title,subtitle,body,logo FROM certificate_templates WHERE design_json IS NULL OR design_json='' OR design_json='{}'").fetchall()
+        for row in rows:
+            design=CERT_DESIGNS.get(row["style"],CERT_DESIGNS["gold"])
+            payload=_certificate_default_design(dict(row),*design["colors"])
+            self.db.execute("UPDATE certificate_templates SET design_json=? WHERE id=?",
+                            (json.dumps(payload,ensure_ascii=False),row["id"]))
 
     def all(self, sql: str, args=()):
         return self.db.execute(sql, args).fetchall()
@@ -1184,56 +1249,7 @@ class App(tk.Tk):
         try: design=json.loads(row.get("design_json") or "{}")
         except (TypeError,json.JSONDecodeError):design={}
         if not design.get("elements"):
-            gold="#B58A35"; ink="#26344B"
-            # Restrained Mongolian ulzii inspired frame and a balanced award hierarchy.
-            # Each detail stays an editable vector shape in the editor and exported PPTX.
-            elements=[
-                {"type":"rect","x":20,"y":20,"w":920,"h":3,"fill":gold},
-                {"type":"rect","x":20,"y":656,"w":920,"h":3,"fill":gold},
-                {"type":"rect","x":20,"y":20,"w":3,"h":639,"fill":gold},
-                {"type":"rect","x":937,"y":20,"w":3,"h":639,"fill":gold},
-                {"type":"rect","x":30,"y":30,"w":900,"h":2,"fill":accent},
-                {"type":"rect","x":30,"y":647,"w":900,"h":2,"fill":accent},
-                {"type":"rect","x":30,"y":30,"w":2,"h":619,"fill":accent},
-                {"type":"rect","x":928,"y":30,"w":2,"h":619,"fill":accent},
-                {"type":"rect","x":43,"y":43,"w":72,"h":3,"fill":gold},
-                {"type":"rect","x":43,"y":43,"w":3,"h":72,"fill":gold},
-                {"type":"rect","x":845,"y":43,"w":72,"h":3,"fill":gold},
-                {"type":"rect","x":914,"y":43,"w":3,"h":72,"fill":gold},
-                {"type":"rect","x":43,"y":633,"w":72,"h":3,"fill":gold},
-                {"type":"rect","x":43,"y":564,"w":3,"h":72,"fill":gold},
-                {"type":"rect","x":845,"y":633,"w":72,"h":3,"fill":gold},
-                {"type":"rect","x":914,"y":564,"w":3,"h":72,"fill":gold},
-                {"type":"ellipse","x":49,"y":49,"w":14,"h":14,"fill":accent},
-                {"type":"ellipse","x":897,"y":49,"w":14,"h":14,"fill":accent},
-                {"type":"ellipse","x":49,"y":616,"w":14,"h":14,"fill":accent},
-                {"type":"ellipse","x":897,"y":616,"w":14,"h":14,"fill":accent},
-                {"type":"text","text":"✦   ❖","x":130,"y":39,"w":220,"h":34,"font":"Georgia","font_size":19,"color":gold,"bold":True,"align":"center"},
-                {"type":"text","text":"❖   ✦","x":610,"y":39,"w":220,"h":34,"font":"Georgia","font_size":19,"color":gold,"bold":True,"align":"center"},
-                {"type":"text","text":"АМЖИЛТЫГ ЭРХЭМЛЭН","x":310,"y":75,"w":340,"h":24,"font":"Segoe UI","font_size":10,"color":accent,"bold":True,"align":"center"},
-                {"type":"text","text":row["title"],"x":90,"y":109,"w":780,"h":59,"font":"Georgia","font_size":34,"color":accent,"bold":True,"align":"center"},
-                {"type":"rect","x":394,"y":177,"w":172,"h":2,"fill":gold},
-                {"type":"text","text":row["subtitle"],"x":130,"y":188,"w":700,"h":35,"font":"Segoe UI","font_size":15,"color":"#627086","bold":False,"align":"center"},
-                {"type":"ellipse","x":474,"y":232,"w":12,"h":12,"fill":gold},
-                {"type":"text","text":"{name}","x":100,"y":252,"w":760,"h":60,"font":"Georgia","font_size":31,"color":ink,"bold":True,"align":"center"},
-                {"type":"rect","x":300,"y":321,"w":360,"h":2,"fill":gold},
-                {"type":"text","text":"❖","x":457,"y":309,"w":46,"h":30,"font":"Georgia","font_size":17,"color":accent,"bold":True,"align":"center"},
-                {"type":"text","text":row["body"],"x":145,"y":352,"w":670,"h":103,"font":"Segoe UI","font_size":17,"color":"#43516A","bold":False,"align":"center"},
-                {"type":"rect","x":170,"y":517,"w":620,"h":1,"fill":"#D7C79F"},
-                {"type":"text","text":"{organization}","x":95,"y":536,"w":250,"h":38,"font":"Segoe UI","font_size":13,"color":ink,"bold":True,"align":"center"},
-                {"type":"text","text":"{teacher}","x":355,"y":536,"w":250,"h":38,"font":"Segoe UI","font_size":13,"color":ink,"bold":True,"align":"center"},
-                {"type":"text","text":"{date}","x":615,"y":536,"w":250,"h":38,"font":"Segoe UI","font_size":13,"color":ink,"bold":True,"align":"center"},
-                {"type":"text","text":"СУРГУУЛЬ / БАЙГУУЛЛАГА","x":95,"y":578,"w":250,"h":22,"font":"Segoe UI","font_size":9,"color":accent,"bold":True,"align":"center"},
-                {"type":"text","text":"БАГШИЙН ГАРЫН ҮСЭГ","x":355,"y":578,"w":250,"h":22,"font":"Segoe UI","font_size":9,"color":accent,"bold":True,"align":"center"},
-                {"type":"text","text":"ОЛГОСОН ОГНОО","x":615,"y":578,"w":250,"h":22,"font":"Segoe UI","font_size":9,"color":accent,"bold":True,"align":"center"},
-            ]
-            if row.get("logo"):
-                try:
-                    logo=Image.open(BytesIO(row["logo"])).convert("RGBA");stream=BytesIO();logo.save(stream,format="PNG")
-                    logo_data=stream.getvalue()
-                except Exception:logo_data=row["logo"]
-                elements.append({"type":"image","data":base64.b64encode(logo_data).decode("ascii"),"mime":"image/png","x":444,"y":25,"w":72,"h":48})
-            design={"background":paper,"elements":elements}
+            design=_certificate_default_design(row,accent,pale,paper)
         def saved(slides):
             updated=slides[0]
             payload={"background":updated.get("background",paper),"elements":updated.get("elements",[])}
