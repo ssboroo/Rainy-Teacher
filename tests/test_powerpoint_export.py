@@ -6,6 +6,7 @@ from io import BytesIO
 from PIL import Image
 from pptx import Presentation
 from powerpoint_export import save_certificate_pptx, save_presentation_pptx
+from bagshiin_tuslah import presentation_html, certificate_html, Store
 
 
 class PowerPointExportTests(unittest.TestCase):
@@ -61,6 +62,57 @@ class PowerPointExportTests(unittest.TestCase):
         pictures = [shape for shape in slide.shapes if shape.shape_type == 13]
         self.assertEqual(len(pictures), 1)
         self.assertAlmostEqual(pictures[0].width / pictures[0].height, 1.0, places=2)
+
+    def test_custom_canvas_elements_export_as_individually_editable_shapes(self):
+        image = BytesIO()
+        Image.new("RGBA", (200, 100), (240, 170, 20, 255)).save(image, format="PNG")
+        deck = {
+            "title": "Canva маягийн засвар",
+            "subject": "Байгалийн ухаан",
+            "slides": [{"title": "Нарны аймаг", "points": [], "elements": [
+                {"type": "text", "text": "НАРНЫ АЙМАГ", "x": 60, "y": 55, "w": 650, "h": 80,
+                 "font_size": 32, "color": "#183F73", "bold": True},
+                {"type": "rect", "x": 70, "y": 180, "w": 150, "h": 90, "fill": "#E4B946"},
+                {"type": "image", "data": __import__("base64").b64encode(image.getvalue()).decode("ascii"),
+                 "mime": "image/png", "x": 300, "y": 170, "w": 200, "h": 120},
+            ]}],
+        }
+        target = self.folder / "custom-design.pptx"
+        save_presentation_pptx(deck, target, {"accent":"#1C5D9D", "bg":"#FFFFFF", "ink":"#102B48", "soft":"#DCEAF7"})
+        slide = Presentation(target).slides[1]
+        texts = [shape.text for shape in slide.shapes if shape.has_text_frame]
+        self.assertIn("НАРНЫ АЙМАГ", texts)
+        self.assertEqual(sum(shape.shape_type == 13 for shape in slide.shapes), 1)
+        self.assertEqual(len(slide.shapes), 3)
+        html_preview = presentation_html({"title":"Нарны аймаг", "theme":"steppe", "slides":deck["slides"]})
+        self.assertIn("НАРНЫ АЙМАГ", html_preview)
+        self.assertIn("data:image/png;base64,", html_preview)
+        self.assertIn("background:#E4B946", html_preview)
+
+    def test_certificate_visual_layout_round_trips_to_pdf_and_powerpoint(self):
+        record={"style":"navy","title":"БАТЛАМЖ","recipient":"Номин","achievement":"Улсын уралдаанд түрүүлсэн",
+                "organization":"Эрдэм сургууль","teacher":"Б. Саруул","issue_date":"2026-10-15",
+                "design_json":__import__("json").dumps({"background":"#FFFAF0","elements":[
+                    {"type":"rect","x":20,"y":20,"w":920,"h":5,"fill":"#183F73"},
+                    {"type":"text","text":"{name}","x":120,"y":210,"w":720,"h":70,"font_size":32,"color":"#183F73","bold":True},
+                    {"type":"text","text":"{achievement}","x":120,"y":320,"w":720,"h":70,"font_size":18,"color":"#223344","bold":False},
+                ]},ensure_ascii=False)}
+        target=self.folder/"custom-certificate.pptx"
+        save_certificate_pptx(record,target,{"navy":{"colors":("#183F73","#EFDFB3","#FFFAF0")}})
+        slide=Presentation(target).slides[0]
+        texts="\n".join(shape.text for shape in slide.shapes if shape.has_text_frame)
+        self.assertIn("Номин",texts)
+        self.assertIn("Улсын уралдаанд түрүүлсэн",texts)
+        rendered=certificate_html(record)
+        self.assertIn("Номин",rendered)
+        self.assertIn("background:#FFFAF0",rendered)
+
+    def test_database_adds_certificate_design_json_columns(self):
+        store=Store(self.folder/"teacher.db")
+        self.addCleanup(store.db.close)
+        for table in ("certificate_templates","certificates"):
+            columns={row[1] for row in store.db.execute(f"PRAGMA table_info({table})")}
+            self.assertIn("design_json",columns)
 
 
 if __name__ == "__main__":
