@@ -118,6 +118,7 @@ class PowerPointExportTests(unittest.TestCase):
         html=certificate_html(record)
         self.assertIn("font-family:Georgia,serif",html)
         self.assertIn("text-align:center",html)
+        self.assertIn("Хэвлэх / PDF хадгалах",html)
         target=self.folder/"certificate-type.pptx"
         save_certificate_pptx(record,target,{"navy":{"colors":("#183F73","#EFDFB3","#FFFAF0")}})
         slide=Presentation(target).slides[0]
