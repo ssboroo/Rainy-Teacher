@@ -9,7 +9,7 @@
 - **Ангийн бүртгэл:** олон анги, сурагчдын мэдээлэл, хайлт, CSV импорт/экспорт
 - **Ирц:** өдрөөр тэмдэглэх, сарын тайлан гаргах
 - **Дүн:** даалгавар, шалгалтын оноо болон хичээл тус бүрийн дундаж
-- **Өргөмжлөл:** Монгол хэв маягтай 20 загвар, хөх-алтлаг хээтэй A4 загвар, гарчиг/өнгө/бичвэр засах, PNG/JPG лого нэмэх, визуал редакторт элемент чирж байрлуулах, PDF болон засварлагдах PPTX экспортлох
+- **Өргөмжлөл:** Монгол хэв маягтай 20 Монгол хэв маягийн загвар, алтан давхар хүрээтэй A4 хөх-алтлаг өргөмжлөл, гарчиг/өнгө/бичвэр засах, PNG/JPG лого нэмэх, визуал редакторт элемент чирж байрлуулах, PDF болон засварлагдах PPTX экспортлох
 - **Шууд preview:** загварын сангаас 20 өргөмжлөлийг хээ, өнгөтэй нь харж сонгох
 - **Шалгалтын материал:** олон сонголттой асуулт, зөв хариулт, оноо; хадгалах, дараа нь засах
 - **Presentation студи:** Монгол хэлтэй 10 загвар, слайд үүсгэж хадгалах, Canva маягийн drag-and-drop редактороор текст/дүрс/зураг нэмэх, чирж байрлуулах, дэвсгэр өнгө/фонт засах; 16:9 PPTX болон PDF экспортлох
@@ -21,9 +21,9 @@
 
 ## Windows installer
 
-GitHub-ийн **Actions** табаас `Rainy-Teacher-Windows-1.7.0` artifact-ийг татаж аваад `RainyTeacher-Setup-1.7.0.exe` суулгагчийг ажиллуулна. Суулгагч Start цэсэнд Rainy Teacher нэмнэ. Desktop shortcut-ийг сонголтоор үүсгэнэ.
+GitHub-ийн **Actions** табаас `Rainy-Teacher-Windows-1.7.1` artifact-ийг татаж аваад `RainyTeacher-Setup-1.7.1.exe` суулгагчийг ажиллуулна. Суулгагч Start цэсэнд Rainy Teacher нэмнэ. Desktop shortcut-ийг сонголтоор үүсгэнэ.
 
-Эх кодоос Windows дээр build хийхдээ Python 3.10+ болон Inno Setup суулгаад `build_windows.bat` ажиллуулна. Энэ нь `dist\RainyTeacher.exe` portable app болон `dist-installer\RainyTeacher-Setup-1.7.0.exe` installer үүсгэнэ. `.pptx` экспортод `python-pptx`, хуучин `.ppt` хөрвүүлэлтэд Microsoft PowerPoint/Office шаардлагатай.
+Эх кодоос Windows дээр build хийхдээ Python 3.10+ болон Inno Setup суулгаад `build_windows.bat` ажиллуулна. Энэ нь `dist\RainyTeacher.exe` portable app болон `dist-installer\RainyTeacher-Setup-1.7.1.exe` installer үүсгэнэ. `.pptx` экспортод `python-pptx`, хуучин `.ppt` хөрвүүлэлтэд Microsoft PowerPoint/Office шаардлагатай.
 
 ## Windows дээр ажиллуулах
 
