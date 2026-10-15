@@ -411,8 +411,9 @@ def certificate_html(record: dict) -> str:
         return f"""<!doctype html><html lang='mn'><meta charset='utf-8'><title>{html.escape(str(record.get('title','ӨРГӨМЖЛӨЛ')))} · {html.escape(values['{name}'])}</title><style>
         @page{{size:A4 landscape;margin:0}}*{{box-sizing:border-box}}body{{margin:0;background:#e9edf3;font-family:'Segoe UI',Arial,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}}
         .sheet{{width:297mm;height:210mm;margin:12px auto;background:{background};position:relative;overflow:hidden;box-shadow:0 8px 36px #9aa5b5}}
-        @media print{{body{{background:white}}.sheet{{margin:0;box-shadow:none}}}}
-        </style><main class='sheet'>{''.join(nodes)}</main></html>"""
+        .print{{position:fixed;right:20px;top:18px;background:{accent};color:#fff;border:0;border-radius:9px;padding:12px 20px;font:700 14px 'Segoe UI',Arial,sans-serif;cursor:pointer;box-shadow:0 4px 14px #0002}}
+        @media print{{body{{background:white}}.sheet{{margin:0;box-shadow:none}}.print{{display:none}}}}
+        </style><button class='print' onclick='window.print()'>Хэвлэх / PDF хадгалах</button><main class='sheet'>{''.join(nodes)}</main></html>"""
     motif, border, layout = design["motif"], design["border"], design["layout"]
     border_svg = mongolian_border_svg(design["pattern"], accent)
     vals = {k: str(record.get(k, "") or "") for k in ("recipient", "achievement", "teacher", "organization", "issue_date", "title", "subtitle", "body")}
