@@ -107,6 +107,24 @@ class PowerPointExportTests(unittest.TestCase):
         self.assertIn("Номин",rendered)
         self.assertIn("background:#FFFAF0",rendered)
 
+    def test_custom_certificate_preserves_editorial_typography_in_html_and_pptx(self):
+        import json
+        record={"style":"navy","title":"ӨРГӨМЖЛӨЛ","recipient":"Номин","achievement":"Олимпиадын аварга",
+                "organization":"Эрдэм сургууль","teacher":"Б. Саруул","issue_date":"2026-10-15",
+                "design_json":json.dumps({"background":"#FFFAF0","elements":[
+                    {"type":"text","text":"ӨРГӨМЖЛӨЛ","x":80,"y":70,"w":800,"h":70,"font":"Georgia","font_size":34,"color":"#183F73","bold":True,"align":"center"},
+                    {"type":"text","text":"{name}","x":120,"y":210,"w":720,"h":70,"font":"Georgia","font_size":31,"color":"#26344B","bold":True,"align":"center"},
+                ]},ensure_ascii=False)}
+        html=certificate_html(record)
+        self.assertIn("font-family:Georgia,serif",html)
+        self.assertIn("text-align:center",html)
+        target=self.folder/"certificate-type.pptx"
+        save_certificate_pptx(record,target,{"navy":{"colors":("#183F73","#EFDFB3","#FFFAF0")}})
+        slide=Presentation(target).slides[0]
+        title=next(shape for shape in slide.shapes if shape.has_text_frame and shape.text=="ӨРГӨМЖЛӨЛ")
+        self.assertEqual(title.text_frame.paragraphs[0].alignment, 2)  # PP_ALIGN.CENTER
+        self.assertEqual(title.text_frame.paragraphs[0].runs[0].font.name,"Georgia")
+
     def test_database_adds_certificate_design_json_columns(self):
         store=Store(self.folder/"teacher.db")
         self.addCleanup(store.db.close)
