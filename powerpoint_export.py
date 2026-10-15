@@ -240,10 +240,13 @@ def save_certificate_pptx(record: dict, path: str | Path, designs: dict) -> Path
                 else:
                     text = str(element.get("text", ""))
                     for token, value in values.items(): text = text.replace(token, value)
+                    align = {"left": PP_ALIGN.LEFT, "center": PP_ALIGN.CENTER, "right": PP_ALIGN.RIGHT}.get(element.get("align"), PP_ALIGN.LEFT)
+                    font = element.get("font") if element.get("font") in ("Georgia", "Segoe UI", "Arial", "Times New Roman") else "Aptos"
                     _textbox(slide, text, x, y, w, h,
                              size=max(8, min(96, int(float(element.get("font_size", 22))))),
                              color=element.get("color", "#1C2940"),
-                             bold=bool(element.get("bold", False)), valign=MSO_ANCHOR.TOP)
+                             bold=bool(element.get("bold", False)), align=align, font=font,
+                             valign=MSO_ANCHOR.TOP)
             except (ValueError, TypeError, KeyError, OSError):
                 continue
         target = Path(path)
