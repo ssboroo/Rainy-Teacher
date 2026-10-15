@@ -131,6 +131,12 @@ class PowerPointExportTests(unittest.TestCase):
         for table in ("certificate_templates","certificates"):
             columns={row[1] for row in store.db.execute(f"PRAGMA table_info({table})")}
             self.assertIn("design_json",columns)
+        templates=store.all("SELECT design_json FROM certificate_templates")
+        designs=[__import__("json").loads(row["design_json"]) for row in templates]
+        self.assertEqual(len(designs),20)
+        self.assertTrue(all(len(design["elements"])>=35 for design in designs))
+        self.assertTrue(all(any(el.get("font")=="Georgia" and el.get("align")=="center" for el in design["elements"])
+                            for design in designs))
 
 
 if __name__ == "__main__":
