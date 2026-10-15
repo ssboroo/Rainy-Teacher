@@ -220,7 +220,10 @@ def save_certificate_pptx(record: dict, path: str | Path, designs: dict) -> Path
                   "{achievement}":str(record.get("achievement", "")),
                   "{organization}":str(record.get("organization", "")),
                   "{teacher}":str(record.get("teacher", "")),
-                  "{date}":str(record.get("issue_date", ""))}
+                  "{date}":str(record.get("issue_date", "")),
+                  "{title}":str(record.get("title", "ӨРГӨМЖЛӨЛ")),
+                  "{subtitle}":str(record.get("subtitle", "")),
+                  "{body}":str(record.get("body", "{achievement}")).replace("{name}",str(record.get("recipient", ""))).replace("{achievement}",str(record.get("achievement", "")))}
         for element in custom["elements"]:
             try:
                 kind = element.get("type", "text")
