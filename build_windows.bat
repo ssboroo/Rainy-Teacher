@@ -7,7 +7,7 @@ py -m pip install --upgrade pyinstaller pillow
 if errorlevel 1 goto failed
 py prepare_assets.py
 if errorlevel 1 goto failed
-py -m PyInstaller --noconfirm --clean --onefile --windowed --name "RainyTeacher" --icon "assets\rainy_teacher.ico" --add-data "assets\rainy_teacher_mark.png;assets" --add-data "assets\rainy_teacher.ico;assets" bagshiin_tuslah.py
+py -m PyInstaller --noconfirm --clean --onefile --windowed --name "RainyTeacher" --icon "assets\rainy_teacher.ico" --add-data "assets\rainy_teacher_mark.png;assets" --add-data "assets\rainy_teacher_mark.png.b64;assets" --add-data "assets\rainy_teacher.ico;assets" bagshiin_tuslah.py
 if errorlevel 1 goto failed
 where iscc >nul 2>nul
 if errorlevel 1 (
