@@ -326,7 +326,7 @@ class App(tk.Tk):
         except tk.TclError:
             pass
         try:
-            self.window_icon = tk.PhotoImage(file=str(resource_path("assets/rainy_teacher_mark.png")))
+            self.window_icon = tk.PhotoImage(data=resource_path("assets/rainy_teacher_mark.png.b64").read_text(encoding="ascii"))
             self.iconphoto(True, self.window_icon)
         except tk.TclError:
             self.window_icon = None
@@ -359,7 +359,7 @@ class App(tk.Tk):
         brand = tk.Frame(self.sidebar, bg=NAV)
         brand.pack(fill="x", padx=22, pady=(25, 6))
         try:
-            self.brand_icon = tk.PhotoImage(file=str(resource_path("assets/rainy_teacher_mark.png"))).subsample(8, 8)
+            self.brand_icon = self.window_icon.subsample(8, 8)
             tk.Label(brand, image=self.brand_icon, bg=NAV).pack(side="left", padx=(0, 11))
         except tk.TclError:
             self.brand_icon = None
