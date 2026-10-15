@@ -22,7 +22,7 @@ jobs:
         run: |
           python -m pip install --upgrade pyinstaller pillow
           python prepare_assets.py
-          python -m PyInstaller --noconfirm --clean --onefile --windowed --name "RainyTeacher" --icon "assets/rainy_teacher.ico" --add-data "assets/rainy_teacher_mark.png;assets" --add-data "assets/rainy_teacher.ico;assets" bagshiin_tuslah.py
+          python -m PyInstaller --noconfirm --clean --onefile --windowed --name "RainyTeacher" --icon "assets/rainy_teacher.ico" --add-data "assets/rainy_teacher_mark.png;assets" --add-data "assets/rainy_teacher_mark.png.b64;assets" --add-data "assets/rainy_teacher.ico;assets" bagshiin_tuslah.py
       - name: Install Inno Setup
         run: choco install innosetup --no-progress -y
       - name: Build Windows installer
