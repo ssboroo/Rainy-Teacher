@@ -16,11 +16,11 @@ if errorlevel 1 (
   pause
   exit /b 0
 )
-iscc /DAppVersion=1.6.0 installer.iss
+iscc /DAppVersion=1.7.0 installer.iss
 if errorlevel 1 goto failed
 echo.
 echo Амжилттай. EXE: dist\RainyTeacher.exe
-echo Суулгагч: dist-installer\RainyTeacher-Setup-1.6.0.exe
+echo Суулгагч: dist-installer\RainyTeacher-Setup-1.7.0.exe
 pause
 exit /b 0
 :failed
