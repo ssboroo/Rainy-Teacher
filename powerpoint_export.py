@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import re
+import base64
 from io import BytesIO
 from pathlib import Path
 
@@ -104,18 +105,50 @@ def _presentation(theme: dict, title: str, subject: str, slides: list[dict]) -> 
     expanded = []
     for slide in slides:
         stitle = str(slide.get("title", "Шинэ слайд")).strip() or "Шинэ слайд"
+        elements = slide.get("elements")
+        if isinstance(elements, list) and elements:
+            expanded.append((stitle, [], elements, slide.get("background", bg)))
+            continue
         points = slide.get("points", [])
         if isinstance(points, str):
             points = [part.strip() for part in points.splitlines() if part.strip()]
         points = [str(point).strip() for point in points if str(point).strip()] or ["Гол санаагаа энд бичнэ үү."]
         for part_no, start in enumerate(range(0, len(points), 4), 1):
             part_title = stitle if start == 0 else f"{stitle} · үргэлжлэл"
-            expanded.append((part_title, points[start:start + 4]))
+            expanded.append((part_title, points[start:start + 4], None, bg))
 
-    for index, (stitle, points) in enumerate(expanded, 2):
+    for index, (stitle, points, elements, slide_bg) in enumerate(expanded, 2):
         page = prs.slides.add_slide(blank)
         page.background.fill.solid()
-        page.background.fill.fore_color.rgb = _rgb(bg)
+        page.background.fill.fore_color.rgb = _rgb(slide_bg)
+        if elements is not None:
+            for element in elements:
+                try:
+                    kind = element.get("type", "text")
+                    # The canvas editor uses a 960×540 logical canvas.
+                    x = float(element.get("x", 0)) * 13.333 / 960
+                    y = float(element.get("y", 0)) * 7.5 / 540
+                    w = float(element.get("w", 100)) * 13.333 / 960
+                    h = float(element.get("h", 40)) * 7.5 / 540
+                    if kind in ("rect", "ellipse"):
+                        shape = MSO_SHAPE.OVAL if kind == "ellipse" else MSO_SHAPE.RECTANGLE
+                        fill = element.get("fill", accent)
+                        item = _rect(page, x, y, w, h, fill, None, shape=shape)
+                    elif kind == "image" and element.get("data"):
+                        raw = base64.b64decode(element["data"])
+                        stream = _fit_image(raw)
+                        scale = min(w / stream.width, h / stream.height)
+                        iw, ih = stream.width * scale, stream.height * scale
+                        page.shapes.add_picture(stream, Inches(x + (w-iw)/2), Inches(y + (h-ih)/2),
+                                                width=Inches(iw), height=Inches(ih))
+                    else:
+                        size = max(8, min(96, int(float(element.get("font_size", 24)))))
+                        _textbox(page, str(element.get("text", "")), x, y, w, h,
+                                 size=size, color=element.get("color", ink),
+                                 bold=bool(element.get("bold", False)), valign=MSO_ANCHOR.TOP)
+                except (ValueError, TypeError, KeyError, OSError):
+                    continue
+            continue
         _rect(page, 0, 0, .12, 7.5, accent)
         _rect(page, 12.55, 0, .783, 7.5, soft)
         _rect(page, 12.77, .46, .26, .26, None, accent, 1.2, MSO_SHAPE.DIAMOND)
@@ -170,12 +203,54 @@ def _fit_image(data: bytes) -> BytesIO:
 
 
 def save_certificate_pptx(record: dict, path: str | Path, designs: dict) -> Path:
-    design = designs.get(record.get("style", "gold"), designs["gold"])
+    design = designs.get(record.get("style", "gold")) or designs.get("gold") or next(iter(designs.values()))
     accent, pale, paper = design["colors"]
     prs = Presentation()
     prs.slide_width, prs.slide_height = Inches(11.69), Inches(8.27)
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     slide.background.fill.solid()
+    try:
+        custom = json.loads(record.get("design_json") or "{}")
+    except (TypeError, json.JSONDecodeError):
+        custom = {}
+    if custom.get("elements"):
+        custom_bg = custom.get("background", paper)
+        slide.background.fill.fore_color.rgb = _rgb(custom_bg)
+        values = {"{name}":str(record.get("recipient", "")),
+                  "{achievement}":str(record.get("achievement", "")),
+                  "{organization}":str(record.get("organization", "")),
+                  "{teacher}":str(record.get("teacher", "")),
+                  "{date}":str(record.get("issue_date", ""))}
+        for element in custom["elements"]:
+            try:
+                kind = element.get("type", "text")
+                x = float(element.get("x", 0)) * 11.69 / 960
+                y = float(element.get("y", 0)) * 8.27 / 679
+                w = float(element.get("w", 100)) * 11.69 / 960
+                h = float(element.get("h", 40)) * 8.27 / 679
+                if kind in ("rect", "ellipse"):
+                    shape = MSO_SHAPE.OVAL if kind == "ellipse" else MSO_SHAPE.RECTANGLE
+                    _rect(slide, x, y, w, h, element.get("fill", accent), shape=shape)
+                elif kind == "image" and element.get("data"):
+                    stream = _fit_image(base64.b64decode(element["data"]))
+                    scale = min(w / stream.width, h / stream.height)
+                    iw, ih = stream.width * scale, stream.height * scale
+                    slide.shapes.add_picture(stream, Inches(x+(w-iw)/2), Inches(y+(h-ih)/2),
+                                             width=Inches(iw), height=Inches(ih))
+                else:
+                    text = str(element.get("text", ""))
+                    for token, value in values.items(): text = text.replace(token, value)
+                    _textbox(slide, text, x, y, w, h,
+                             size=max(8, min(96, int(float(element.get("font_size", 22))))),
+                             color=element.get("color", "#1C2940"),
+                             bold=bool(element.get("bold", False)), valign=MSO_ANCHOR.TOP)
+            except (ValueError, TypeError, KeyError, OSError):
+                continue
+        target = Path(path)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        prs.save(str(target))
+        return target
+
     slide.background.fill.fore_color.rgb = _rgb(paper)
 
     # Double-line frame with stepped corner motifs inspired by Mongolian ulzii patterns.
