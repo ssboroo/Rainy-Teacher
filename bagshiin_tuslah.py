@@ -9,6 +9,7 @@ import mimetypes
 import os
 import shutil
 import sqlite3
+import sys
 import tempfile
 import webbrowser
 from datetime import date, datetime
@@ -17,7 +18,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox, filedialog, simpledialog
 
 APP_NAME = "Багшийн Туслах"
-APP_VERSION = "1.2.0"
+APP_VERSION = "1.3.0"
 BG = "#F3F6FB"
 NAV = "#13213A"
 BLUE = "#356AE6"
@@ -32,6 +33,11 @@ def data_dir() -> Path:
     root = Path(os.environ.get("APPDATA", Path.home())) / "BagshiinTuslah"
     root.mkdir(parents=True, exist_ok=True)
     return root
+
+
+def resource_path(relative_path: str) -> Path:
+    bundle_dir = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
+    return bundle_dir / relative_path
 
 
 class Store:
@@ -260,10 +266,19 @@ def exam_html(exam: dict, questions: list[dict], answer_key: bool = False) -> st
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title(f"{APP_NAME} · {APP_VERSION}")
+        self.title(f"Rainy Teacher · {APP_NAME}")
         self.geometry("1180x760")
         self.minsize(980, 650)
         self.configure(bg=BG)
+        try:
+            self.iconbitmap(str(resource_path("assets/rainy_teacher.ico")))
+        except tk.TclError:
+            pass
+        try:
+            self.window_icon = tk.PhotoImage(file=str(resource_path("assets/rainy_teacher_mark.png")))
+            self.iconphoto(True, self.window_icon)
+        except tk.TclError:
+            self.window_icon = None
         self.store = Store()
         self.active_class: int | None = None
         self.page = "Нүүр"
@@ -288,10 +303,19 @@ class App(tk.Tk):
         self.sidebar = tk.Frame(self, bg=NAV, width=218)
         self.sidebar.pack(side="left", fill="y")
         self.sidebar.pack_propagate(False)
-        tk.Label(self.sidebar, text="БАГШИЙН\nТУСЛАХ", bg=NAV, fg=WHITE,
-                 font=("Segoe UI", 19, "bold"), justify="left", pady=24).pack(anchor="w", padx=24)
-        tk.Label(self.sidebar, text="Хичээлээ цэгцтэй удирд", bg=NAV, fg="#A9B8D2",
-                 font=("Segoe UI", 9)).pack(anchor="w", padx=24, pady=(0, 22))
+        brand = tk.Frame(self.sidebar, bg=NAV)
+        brand.pack(anchor="w", fill="x", padx=18, pady=(22, 8))
+        try:
+            self.brand_icon = tk.PhotoImage(file=str(resource_path("assets/rainy_teacher_mark.png"))).subsample(4, 4)
+            tk.Label(brand, image=self.brand_icon, bg=NAV).pack(side="left", padx=(0, 10))
+        except tk.TclError:
+            self.brand_icon = None
+        brand_text = tk.Frame(brand, bg=NAV)
+        brand_text.pack(side="left", anchor="center")
+        tk.Label(brand_text, text="RAINY", bg=NAV, fg=WHITE, font=("Segoe UI", 13, "bold")).pack(anchor="w")
+        tk.Label(brand_text, text="TEACHER", bg=NAV, fg="#66E0D0", font=("Segoe UI", 10, "bold")).pack(anchor="w")
+        tk.Label(self.sidebar, text="Багшийн ажлын туслах", bg=NAV, fg="#A9B8D2",
+                 font=("Segoe UI", 9)).pack(anchor="w", padx=24, pady=(3, 18))
         self.nav_buttons = {}
         for label, icon in [("Нүүр", "⌂"), ("Сурагчид", "♙"), ("Ирц", "✓"), ("Дүн", "▤"),
                             ("Өргөмжлөл", "✦"), ("Шалгалтын материал", "✎"), ("Тайлан ба хэвлэх", "▧")]:
