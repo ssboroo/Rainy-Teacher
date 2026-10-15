@@ -18,15 +18,17 @@ import tkinter as tk
 from tkinter import ttk, messagebox, filedialog, simpledialog
 
 APP_NAME = "Багшийн Туслах"
-APP_VERSION = "1.3.0"
-BG = "#F3F6FB"
-NAV = "#13213A"
-BLUE = "#356AE6"
+APP_VERSION = "1.4.0"
+BG = "#F4F7FB"
+NAV = "#101B31"
+BLUE = "#3478F6"
 INK = "#17243A"
-MUTED = "#718096"
+MUTED = "#748198"
 WHITE = "#FFFFFF"
-GREEN = "#1B8B67"
+GREEN = "#18A77A"
 RED = "#D35454"
+BORDER = "#E5EAF2"
+TEAL = "#27AFA5"
 
 
 def data_dir() -> Path:
@@ -267,8 +269,8 @@ class App(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title(f"Rainy Teacher · {APP_NAME}")
-        self.geometry("1180x760")
-        self.minsize(980, 650)
+        self.geometry("1360x900")
+        self.minsize(1120, 760)
         self.configure(bg=BG)
         try:
             self.iconbitmap(str(resource_path("assets/rainy_teacher.ico")))
@@ -288,67 +290,83 @@ class App(tk.Tk):
         self.protocol("WM_DELETE_WINDOW", self._close)
 
     def _style(self):
-        s = ttk.Style(self)
-        s.theme_use("clam")
-        s.configure("Treeview", background=WHITE, fieldbackground=WHITE, foreground=INK,
-                    rowheight=34, borderwidth=0, font=("Segoe UI", 10))
-        s.configure("Treeview.Heading", background="#EAF0FA", foreground=INK,
-                    font=("Segoe UI", 10, "bold"), relief="flat", padding=(8, 9))
-        s.map("Treeview", background=[("selected", "#DCE8FF")], foreground=[("selected", INK)])
-        s.configure("TCombobox", padding=7, font=("Segoe UI", 10))
-        s.configure("TEntry", padding=7, font=("Segoe UI", 10))
-        s.configure("TButton", padding=(12, 8), font=("Segoe UI", 10))
-
+        style = ttk.Style(self)
+        style.theme_use("clam")
+        style.configure("Treeview", background=WHITE, fieldbackground=WHITE, foreground=INK,
+                        rowheight=38, borderwidth=0, font=("Segoe UI", 10))
+        style.configure("Treeview.Heading", background="#F4F7FB", foreground="#5D6B82",
+                        font=("Segoe UI", 9, "bold"), relief="flat", padding=(12, 12))
+        style.map("Treeview", background=[("selected", "#DDEAFE")], foreground=[("selected", INK)])
+        style.configure("TCombobox", padding=8, font=("Segoe UI", 10), fieldbackground=WHITE)
+        style.map("TCombobox", fieldbackground=[("readonly", WHITE)], selectbackground=[("readonly", WHITE)])
+        style.configure("TEntry", padding=9, font=("Segoe UI", 10))
+        style.configure("TButton", padding=(13, 9), font=("Segoe UI", 10))
+        style.configure("Vertical.TScrollbar", background="#E7ECF4", troughcolor=BG, bordercolor=BG, arrowsize=12)
     def _layout(self):
-        self.sidebar = tk.Frame(self, bg=NAV, width=218)
+        self.sidebar = tk.Frame(self, bg=NAV, width=244)
         self.sidebar.pack(side="left", fill="y")
         self.sidebar.pack_propagate(False)
+
         brand = tk.Frame(self.sidebar, bg=NAV)
-        brand.pack(anchor="w", fill="x", padx=18, pady=(22, 8))
+        brand.pack(fill="x", padx=22, pady=(25, 6))
         try:
             self.brand_icon = tk.PhotoImage(file=str(resource_path("assets/rainy_teacher_mark.png"))).subsample(4, 4)
-            tk.Label(brand, image=self.brand_icon, bg=NAV).pack(side="left", padx=(0, 10))
+            tk.Label(brand, image=self.brand_icon, bg=NAV).pack(side="left", padx=(0, 11))
         except tk.TclError:
             self.brand_icon = None
         brand_text = tk.Frame(brand, bg=NAV)
         brand_text.pack(side="left", anchor="center")
-        tk.Label(brand_text, text="RAINY", bg=NAV, fg=WHITE, font=("Segoe UI", 13, "bold")).pack(anchor="w")
-        tk.Label(brand_text, text="TEACHER", bg=NAV, fg="#66E0D0", font=("Segoe UI", 10, "bold")).pack(anchor="w")
-        tk.Label(self.sidebar, text="Багшийн ажлын туслах", bg=NAV, fg="#A9B8D2",
-                 font=("Segoe UI", 9)).pack(anchor="w", padx=24, pady=(3, 18))
+        tk.Label(brand_text, text="RAINY", bg=NAV, fg=WHITE, font=("Segoe UI", 14, "bold")).pack(anchor="w")
+        tk.Label(brand_text, text="TEACHER", bg=NAV, fg="#62DCCB", font=("Segoe UI", 9, "bold")).pack(anchor="w")
+        tk.Label(self.sidebar, text="БАГШИЙН АЖЛЫН НЭГДСЭН ОРЧИН", bg=NAV, fg="#91A1BA",
+                 font=("Segoe UI", 7, "bold")).pack(anchor="w", padx=24, pady=(0, 26))
+
         self.nav_buttons = {}
-        for label, icon in [("Нүүр", "⌂"), ("Сурагчид", "♙"), ("Ирц", "✓"), ("Дүн", "▤"),
-                            ("Өргөмжлөл", "✦"), ("Шалгалтын материал", "✎"), ("Тайлан ба хэвлэх", "▧")]:
-            b = tk.Button(self.sidebar, text=f"  {icon}    {label}", anchor="w", relief="flat",
-                          bd=0, bg=NAV, fg="#D5DEED", activebackground="#263956",
-                          activeforeground=WHITE, font=("Segoe UI", 10), padx=20, pady=13,
-                          command=lambda p=label: self.show_page(p))
-            b.pack(fill="x", padx=10, pady=2)
-            self.nav_buttons[label] = b
-        tk.Frame(self.sidebar, bg="#344460", height=1).pack(fill="x", padx=18, pady=(24, 14))
-        tk.Button(self.sidebar, text="  ⤓    Нөөц хуулбар", anchor="w", relief="flat", bd=0,
-                  bg=NAV, fg="#D5DEED", activebackground="#263956", activeforeground=WHITE,
-                  font=("Segoe UI", 10), padx=20, pady=13, command=self.backup).pack(fill="x", padx=10)
-        tk.Label(self.sidebar, text="Офлайн · Таны компьютерт хадгална", bg=NAV, fg="#8FA0BA",
-                 font=("Segoe UI", 8), wraplength=175, justify="left").pack(side="bottom", anchor="w", padx=23, pady=20)
+        sections = [
+            ("ЕРӨНХИЙ", [("Нүүр", "⌂")]),
+            ("СУРАЛЦАГЧ", [("Сурагчид", "♙"), ("Ирц", "✓"), ("Дүн", "▤")]),
+            ("БИЧИГ БАРИМТ", [("Өргөмжлөл", "✦"), ("Шалгалтын материал", "✎"), ("Тайлан ба хэвлэх", "▧")]),
+        ]
+        for section, items in sections:
+            tk.Label(self.sidebar, text=section, bg=NAV, fg="#7485A0",
+                     font=("Segoe UI", 8, "bold")).pack(anchor="w", padx=25, pady=(8, 8))
+            for label, icon in items:
+                button = tk.Button(
+                    self.sidebar, text=f"  {icon}     {label}", anchor="w", relief="flat", bd=0,
+                    bg=NAV, fg="#C8D2E1", activebackground="#1E3150", activeforeground=WHITE,
+                    font=("Segoe UI", 10, "bold" if label == self.page else "normal"),
+                    padx=18, pady=12, command=lambda page=label: self.show_page(page), cursor="hand2"
+                )
+                button.pack(fill="x", padx=12, pady=2)
+                self.nav_buttons[label] = button
+
+        tk.Frame(self.sidebar, bg="#2B3B55", height=1).pack(fill="x", padx=22, pady=(18, 12))
+        self._button(self.sidebar, "↓   Нөөц хуулбар", self.backup, False).pack(fill="x", padx=14, pady=(0, 14))
+        status = tk.Frame(self.sidebar, bg="#172743", padx=14, pady=13)
+        status.pack(side="bottom", fill="x", padx=14, pady=18)
+        tk.Label(status, text="●  ОФЛАЙН ХАДГАЛАЛТ", bg="#172743", fg="#70DCC4",
+                 font=("Segoe UI", 8, "bold")).pack(anchor="w")
+        tk.Label(status, text="Мэдээлэл таны компьютерт хадгалагдана", bg="#172743", fg="#A4B2C7",
+                 font=("Segoe UI", 8), wraplength=185, justify="left").pack(anchor="w", pady=(5, 0))
 
         self.main = tk.Frame(self, bg=BG)
         self.main.pack(side="left", fill="both", expand=True)
-        top = tk.Frame(self.main, bg=WHITE, height=72)
+        top = tk.Frame(self.main, bg=WHITE, height=82)
         top.pack(fill="x")
         top.pack_propagate(False)
-        self.page_title = tk.Label(top, text="Нүүр", bg=WHITE, fg=INK, font=("Segoe UI", 17, "bold"))
-        self.page_title.pack(side="left", padx=28)
-        tk.Label(top, text="АНГИ", bg=WHITE, fg=MUTED, font=("Segoe UI", 8, "bold")).pack(side="right", padx=(8, 24))
+        self.page_title = tk.Label(top, text="Нүүр", bg=WHITE, fg=INK, font=("Segoe UI", 19, "bold"))
+        self.page_title.pack(side="left", padx=30)
+        right = tk.Frame(top, bg=WHITE)
+        right.pack(side="right", padx=25)
+        tk.Label(right, text="АНГИ", bg=WHITE, fg=MUTED, font=("Segoe UI", 8, "bold")).pack(side="left", padx=(0, 9))
         self.class_var = tk.StringVar()
-        self.class_combo = ttk.Combobox(top, textvariable=self.class_var, state="readonly", width=18)
-        self.class_combo.pack(side="right", pady=17)
+        self.class_combo = ttk.Combobox(right, textvariable=self.class_var, state="readonly", width=17)
+        self.class_combo.pack(side="left", ipady=2)
         self.class_combo.bind("<<ComboboxSelected>>", self._select_class)
-        self._button(top, "+ Анги", self.add_class).pack(side="right", padx=10)
+        self._button(right, "+ Анги", self.add_class).pack(side="left", padx=(10, 0))
         self.body = tk.Frame(self.main, bg=BG)
-        self.body.pack(fill="both", expand=True, padx=26, pady=22)
+        self.body.pack(fill="both", expand=True, padx=30, pady=26)
         self.refresh_classes()
-
     def refresh_classes(self):
         rows = self.store.all("SELECT * FROM classes ORDER BY name")
         self.class_rows = rows
@@ -390,47 +408,68 @@ class App(tk.Tk):
         return card
 
     def _section(self, parent, title, subtitle=None):
-        row = tk.Frame(parent, bg=BG); row.pack(fill="x", pady=(0, 14))
-        tk.Label(row, text=title, bg=BG, fg=INK, font=("Segoe UI", 14, "bold")).pack(anchor="w")
-        if subtitle: tk.Label(row, text=subtitle, bg=BG, fg=MUTED, font=("Segoe UI", 9)).pack(anchor="w", pady=(3, 0))
-
+        row = tk.Frame(parent, bg=BG)
+        row.pack(fill="x", pady=(0, 18))
+        tk.Label(row, text=title, bg=BG, fg=INK, font=("Segoe UI", 16, "bold")).pack(anchor="w")
+        if subtitle:
+            tk.Label(row, text=subtitle, bg=BG, fg=MUTED, font=("Segoe UI", 9)).pack(anchor="w", pady=(4, 0))
     def _button(self, parent, text, command, primary=True):
         return tk.Button(parent, text=text, command=command, relief="flat", bd=0,
                          bg=BLUE if primary else WHITE, fg=WHITE if primary else INK,
-                         activebackground="#2856C4" if primary else "#EAF0FA",
-                         activeforeground=WHITE if primary else INK, padx=14, pady=9,
-                         font=("Segoe UI", 9, "bold" if primary else "normal"), cursor="hand2")
-
+                         activebackground="#2463D4" if primary else "#EEF3FA",
+                         activeforeground=WHITE if primary else INK,
+                         padx=15, pady=10, font=("Segoe UI", 9, "bold" if primary else "normal"),
+                         cursor="hand2", highlightthickness=1 if not primary else 0,
+                         highlightbackground=BORDER)
     def _dashboard(self):
-        self._section(self.body, "Сайн байна уу 👋", "Анги, ирц, дүнгээ нэг дороос удирдаарай.")
         if not self.active_class:
-            box = tk.Frame(self.body, bg=WHITE, padx=28, pady=26); box.pack(fill="x", pady=10)
-            tk.Label(box, text="Эхлээд ангиа үүсгээрэй", bg=WHITE, fg=INK, font=("Segoe UI", 14, "bold")).pack(anchor="w")
-            tk.Label(box, text="Анги үүсгэсний дараа сурагч бүртгэж, ирц болон дүн хөтөлж эхэлнэ.", bg=WHITE, fg=MUTED, font=("Segoe UI", 10)).pack(anchor="w", pady=8)
-            self._button(box, "+ Анги үүсгэх", self.add_class).pack(anchor="w", pady=(7, 0))
+            self._section(self.body, "Тавтай морилно уу", "Rainy Teacher-д ангиа нэмээд өдөр тутмын ажлаа эхлүүлээрэй.")
+            welcome = tk.Frame(self.body, bg=NAV, padx=30, pady=28)
+            welcome.pack(fill="x", pady=(0, 22))
+            tk.Label(welcome, text="Багшийн ажлаа нэг дороос", bg=NAV, fg=WHITE,
+                     font=("Segoe UI", 21, "bold")).pack(anchor="w")
+            tk.Label(welcome, text="Сурагч, ирц, дүн, өргөмжлөл, шалгалтын материалаа нэг офлайн орчинд.",
+                     bg=NAV, fg="#C1CEE0", font=("Segoe UI", 10)).pack(anchor="w", pady=(7, 16))
+            self._button(welcome, "+  Анги үүсгэх", self.add_class).pack(anchor="w")
             return
         cid = self.active_class
         total = self.store.all("SELECT COUNT(*) n FROM students WHERE class_id=?", (cid,))[0]["n"]
         today = date.today().isoformat()
         marked = self.store.all("SELECT COUNT(*) n FROM attendance a JOIN students s ON s.id=a.student_id WHERE s.class_id=? AND a.day=?", (cid, today))[0]["n"]
         present = self.store.all("SELECT COUNT(*) n FROM attendance a JOIN students s ON s.id=a.student_id WHERE s.class_id=? AND a.day=? AND a.status='Ирсэн'", (cid, today))[0]["n"]
+        welcome = tk.Frame(self.body, bg=NAV, padx=26, pady=22)
+        welcome.pack(fill="x", pady=(0, 20))
+        welcome_left = tk.Frame(welcome, bg=NAV); welcome_left.pack(side="left", fill="x", expand=True)
+        tk.Label(welcome_left, text=f"Сайн байна уу, {self.class_var.get()} анги 👋", bg=NAV, fg=WHITE,
+                 font=("Segoe UI", 19, "bold")).pack(anchor="w")
+        tk.Label(welcome_left, text="Өнөөдрийн ажлаа үргэлжлүүлээрэй. Таны мэдээлэл энэ компьютерт хадгалагдана.",
+                 bg=NAV, fg="#BECDE0", font=("Segoe UI", 9)).pack(anchor="w", pady=(6, 0))
+        tk.Label(welcome, text=date.today().strftime("%Y · %m · %d"), bg="#1B2C48", fg="#D8E3F1",
+                 font=("Segoe UI", 10, "bold"), padx=14, pady=10).pack(side="right")
         cards = tk.Frame(self.body, bg=BG); cards.pack(fill="x", pady=(0, 22))
-        for title, val, hint, color in [("Нийт сурагч", str(total), "Сонгосон ангид", BLUE),
-                                       ("Өнөөдрийн ирц", f"{marked}/{total}" if total else "0/0", f"Ирсэн: {present}", GREEN),
-                                       ("Анги", self.class_var.get(), "Одоогийн сонголт", "#7A58C1")]:
+        for title, val, hint, color in [
+            ("Нийт сурагч", str(total), "Сонгосон ангид", BLUE),
+            ("Өнөөдрийн ирц", f"{marked}/{total}" if total else "0/0", f"Ирсэн: {present}", GREEN),
+            ("Бүртгэлтэй анги", str(len(self.class_rows)), "Таны сургалтын сан", "#7A58C1")
+        ]:
             self._card(cards, title, val, hint, color).pack(side="left", fill="both", expand=True, padx=(0, 12))
-        self._section(self.body, "Шуурхай үйлдэл", "Түгээмэл ажлаа шууд эхлүүлээрэй.")
+        self._section(self.body, "Шуурхай үйлдэл", "Түгээмэл ажлаа нэг товшилтоор нээнэ.")
         quick = tk.Frame(self.body, bg=BG); quick.pack(fill="x")
-        for title, desc, page in [("Сурагч нэмэх", "Шинэ сурагчийн мэдээлэл бүртгэх", "Сурагчид"),
-                                  ("Өнөөдрийн ирц", "Ирц тэмдэглэж хадгалах", "Ирц"),
-                                  ("Дүн оруулах", "Шалгалт, даалгаврын оноо нэмэх", "Дүн"),
-                                  ("Тайлан хэвлэх", "Жагсаалт ба тайлан хэвлэх", "Тайлан ба хэвлэх")]:
-            tile = tk.Frame(quick, bg=WHITE, padx=18, pady=17, highlightthickness=1, highlightbackground="#E7ECF4")
+        shortcuts = [
+            ("Сурагч нэмэх", "Шинэ сурагчийн мэдээлэл", "Сурагчид", "＋", BLUE),
+            ("Ирц тэмдэглэх", "Өнөөдрийн ирцээ хөтлөх", "Ирц", "✓", GREEN),
+            ("Дүн оруулах", "Шалгалт, даалгаврын оноо", "Дүн", "↗", "#7A58C1"),
+            ("Шалгалт үүсгэх", "Материалаа хадгалж хэвлэх", "Шалгалтын материал", "✎", "#DB8A39")
+        ]
+        for title, desc, page, symbol, color in shortcuts:
+            tile = tk.Frame(quick, bg=WHITE, padx=16, pady=17, highlightthickness=1, highlightbackground=BORDER)
             tile.pack(side="left", fill="both", expand=True, padx=(0, 12))
-            tk.Label(tile, text=title, bg=WHITE, fg=INK, font=("Segoe UI", 11, "bold")).pack(anchor="w")
-            tk.Label(tile, text=desc, bg=WHITE, fg=MUTED, font=("Segoe UI", 8), wraplength=145, justify="left").pack(anchor="w", pady=(6, 12))
-            self._button(tile, "Нээх →", lambda p=page: self.show_page(p), False).pack(anchor="w")
-
+            tk.Label(tile, text=symbol, bg="#EEF4FF", fg=color, font=("Segoe UI", 16, "bold"),
+                     width=3, pady=5).pack(anchor="w")
+            tk.Label(tile, text=title, bg=WHITE, fg=INK, font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(12, 3))
+            tk.Label(tile, text=desc, bg=WHITE, fg=MUTED, font=("Segoe UI", 8),
+                     wraplength=160, justify="left").pack(anchor="w")
+            self._button(tile, "Нээх  →", lambda page=page: self.show_page(page), False).pack(anchor="w", pady=(11, 0))
     def _tree(self, parent, columns, headings, widths=None):
         frame = tk.Frame(parent, bg=WHITE, highlightthickness=1, highlightbackground="#E7ECF4")
         frame.pack(fill="both", expand=True)
@@ -612,70 +651,218 @@ class App(tk.Tk):
         if messagebox.askyesno("Дүн устгах", "Сонгосон дүнг устгах уу?", parent=self): self.store.run("DELETE FROM grades WHERE id=?", (int(sel[0]),)); self._load_grades()
 
     def _certificates_page(self):
-        self._section(self.body, "Өргөмжлөл, батламж", "Монгол загвараа сонгож засварлаад лого, сурагчийн нэртэйгээр хэвлэнэ.")
-        bar = tk.Frame(self.body, bg=BG); bar.pack(fill="x", pady=(0, 12))
+        self._section(self.body, "Өргөмжлөл, батламжийн студи",
+                      "Монгол хээтэй 20 загвараас сонгож, preview дээр шалгаад хэвлэнэ.")
         self.cert_template_var = tk.StringVar()
-        self.cert_template_combo = ttk.Combobox(bar, textvariable=self.cert_template_var, state="readonly", width=28)
-        self.cert_template_combo.pack(side="left")
-        self.cert_template_combo.bind("<<ComboboxSelected>>", self._certificate_template_selected)
-        self._button(bar, "Загварын бичвэр, өнгө засах", self.edit_certificate_template, False).pack(side="left", padx=8)
-        self._button(bar, "Лого оруулах", self.choose_certificate_logo, False).pack(side="left")
-        self._button(bar, "Лого арилгах", self.remove_certificate_logo, False).pack(side="left", padx=8)
-        self.cert_logo_label = tk.Label(bar, text="Лого сонгоогүй", bg=BG, fg=MUTED, font=("Segoe UI", 8))
-        self.cert_logo_label.pack(side="right")
-
-        form = tk.Frame(self.body, bg=WHITE, padx=18, pady=16, highlightthickness=1, highlightbackground="#E7ECF4")
-        form.pack(fill="x", pady=(0, 14))
-        tk.Label(form, text="Сурагчид олгох мэдээлэл", bg=WHITE, fg=INK, font=("Segoe UI", 11, "bold")).grid(row=0, column=0, columnspan=4, sticky="w", pady=(0, 10))
-        self.cert_vars = {k: tk.StringVar(value=v) for k, v in {
-            "recipient":"", "achievement":"", "organization":"", "teacher":"", "issue_date":date.today().isoformat()
+        self.cert_vars = {key: tk.StringVar(value=value) for key, value in {
+            "recipient": "", "achievement": "", "organization": "", "teacher": "",
+            "issue_date": date.today().isoformat()
         }.items()}
-        tk.Label(form, text="Ангиас нэр сонгох", bg=WHITE, fg=MUTED, font=("Segoe UI", 9)).grid(row=1, column=0, sticky="w", padx=(0, 8), pady=4)
-        self.cert_student_combo = ttk.Combobox(form, state="readonly", width=25)
-        self.cert_student_combo.grid(row=1, column=1, sticky="ew", padx=(0, 16), pady=4)
-        self.cert_student_combo.bind("<<ComboboxSelected>>", self._certificate_student_selected)
-        tk.Label(form, text="Сурагчийн овог, нэр", bg=WHITE, fg=MUTED, font=("Segoe UI", 9)).grid(row=1, column=2, sticky="w", padx=(0, 8), pady=4)
-        ttk.Entry(form, textvariable=self.cert_vars["recipient"], width=29).grid(row=1, column=3, sticky="ew", pady=4)
-        for rownum, (left, key1, right, key2) in enumerate([
-            ("Амжилт / шалтгаан", "achievement", "Сургууль / байгууллага", "organization"),
-            ("Багшийн нэр", "teacher", "Огноо", "issue_date")], 2):
-            tk.Label(form, text=left, bg=WHITE, fg=MUTED, font=("Segoe UI", 9)).grid(row=rownum, column=0, sticky="w", padx=(0, 8), pady=4)
-            ttk.Entry(form, textvariable=self.cert_vars[key1], width=29).grid(row=rownum, column=1, sticky="ew", padx=(0, 16), pady=4)
-            tk.Label(form, text=right, bg=WHITE, fg=MUTED, font=("Segoe UI", 9)).grid(row=rownum, column=2, sticky="w", padx=(0, 8), pady=4)
-            ttk.Entry(form, textvariable=self.cert_vars[key2], width=29).grid(row=rownum, column=3, sticky="ew", pady=4)
-        form.grid_columnconfigure(1, weight=1); form.grid_columnconfigure(3, weight=1)
-        actions = tk.Frame(form, bg=WHITE); actions.grid(row=4, column=0, columnspan=4, sticky="w", pady=(12, 0))
-        self._button(actions, "Хадгалаад хэвлэх", lambda: self.save_certificate(True)).pack(side="left")
-        self._button(actions, "Зөвхөн хадгалах", lambda: self.save_certificate(False), False).pack(side="left", padx=8)
+        self.cert_vars["recipient"].trace_add("write", lambda *_: self._draw_certificate_preview())
+        self.cert_vars["achievement"].trace_add("write", lambda *_: self._draw_certificate_preview())
+        self.cert_vars["teacher"].trace_add("write", lambda *_: self._draw_certificate_preview())
+        self.cert_vars["organization"].trace_add("write", lambda *_: self._draw_certificate_preview())
+        self.cert_vars["issue_date"].trace_add("write", lambda *_: self._draw_certificate_preview())
 
-        self._section(self.body, "Хадгалсан өргөмжлөлүүд", "Дараа нь дахин нээж хэвлэх эсвэл хэрэггүйг устгана.")
-        self.cert_tree = self._tree(self.body, ("id", "date", "name", "award", "template"),
-                                    ("№", "Огноо", "Сурагч", "Амжилт", "Загвар"), (55, 100, 200, 260, 170))
-        actions = tk.Frame(self.body, bg=BG); actions.pack(fill="x", pady=(8, 0))
+        toolbar = tk.Frame(self.body, bg=BG); toolbar.pack(fill="x", pady=(0, 12))
+        self.cert_template_name = tk.Label(toolbar, text="Загвар сонгоогүй", bg=BG, fg=INK,
+                                           font=("Segoe UI", 10, "bold"))
+        self.cert_template_name.pack(side="left")
+        self._button(toolbar, "▦   20 загвар харах", self.open_certificate_gallery, False).pack(side="left", padx=(12, 7))
+        self._button(toolbar, "Загвар засах", self.edit_certificate_template, False).pack(side="left")
+        self._button(toolbar, "Лого нэмэх", self.choose_certificate_logo, False).pack(side="right", padx=(7, 0))
+        self._button(toolbar, "Лого арилгах", self.remove_certificate_logo, False).pack(side="right")
+        self.cert_logo_label = tk.Label(toolbar, text="Лого сонгоогүй", bg=BG, fg=MUTED, font=("Segoe UI", 8))
+        self.cert_logo_label.pack(side="right", padx=10)
+
+        stage = tk.Frame(self.body, bg=BG); stage.pack(fill="x", pady=(0, 15))
+        preview_card = tk.Frame(stage, bg=WHITE, highlightthickness=1, highlightbackground=BORDER)
+        preview_card.pack(side="left", fill="both", expand=True, padx=(0, 14))
+        preview_head = tk.Frame(preview_card, bg=WHITE); preview_head.pack(fill="x", padx=15, pady=(12, 0))
+        tk.Label(preview_head, text="ШУУД PREVIEW", bg=WHITE, fg=BLUE,
+                 font=("Segoe UI", 8, "bold")).pack(side="left")
+        tk.Label(preview_head, text="A4 · Хэвлэхэд бэлэн", bg=WHITE, fg=MUTED,
+                 font=("Segoe UI", 8)).pack(side="right")
+        self.cert_preview = tk.Canvas(preview_card, height=255, bg="#F6F8FC", highlightthickness=0)
+        self.cert_preview.pack(fill="x", padx=14, pady=(10, 14))
+        self.cert_preview.bind("<Configure>", lambda _event: self._draw_certificate_preview())
+
+        form = tk.Frame(stage, bg=WHITE, width=345, padx=17, pady=15,
+                        highlightthickness=1, highlightbackground=BORDER)
+        form.pack(side="left", fill="y")
+        form.pack_propagate(False)
+        tk.Label(form, text="Өргөмжлөл бэлдэх", bg=WHITE, fg=INK,
+                 font=("Segoe UI", 12, "bold")).pack(anchor="w")
+        tk.Label(form, text="Сурагчийн мэдээллийг оруулна уу", bg=WHITE, fg=MUTED,
+                 font=("Segoe UI", 8)).pack(anchor="w", pady=(3, 12))
+        tk.Label(form, text="АНГИАС СОНГОХ", bg=WHITE, fg=MUTED,
+                 font=("Segoe UI", 7, "bold")).pack(anchor="w")
+        self.cert_student_combo = ttk.Combobox(form, state="readonly")
+        self.cert_student_combo.pack(fill="x", pady=(4, 9))
+        self.cert_student_combo.bind("<<ComboboxSelected>>", self._certificate_student_selected)
+        fields = [
+            ("Сурагчийн нэр", "recipient", "Жишээ: Бат-Эрдэнэ"),
+            ("Амжилт / шалтгаан", "achievement", "Жишээ: Олимпиадад тэргүүлсэн"),
+            ("Сургууль / байгууллага", "organization", ""),
+            ("Багшийн нэр", "teacher", ""),
+            ("Огноо", "issue_date", "YYYY-MM-DD")
+        ]
+        for label, key, placeholder in fields:
+            tk.Label(form, text=label, bg=WHITE, fg=MUTED,
+                     font=("Segoe UI", 8, "bold")).pack(anchor="w")
+            entry = ttk.Entry(form, textvariable=self.cert_vars[key])
+            entry.pack(fill="x", pady=(3, 8))
+            if placeholder:
+                entry.insert(0, "") if not self.cert_vars[key].get() else None
+        actions = tk.Frame(form, bg=WHITE); actions.pack(fill="x", pady=(3, 0))
+        self._button(actions, "Хадгалаад хэвлэх", lambda: self.save_certificate(True)).pack(fill="x", pady=(0, 7))
+        self._button(actions, "Зөвхөн хадгалах", lambda: self.save_certificate(False), False).pack(fill="x")
+
+        saved = tk.Frame(self.body, bg=BG); saved.pack(fill="both", expand=True)
+        self._section(saved, "Хадгалсан өргөмжлөлүүд", "Хадгалсан загвараа дахин нээж хэвлэх боломжтой.")
+        self.cert_tree = self._tree(saved, ("id", "date", "name", "award", "template"),
+                                    ("№", "Огноо", "Сурагч", "Амжилт", "Загвар"), (48, 100, 180, 250, 160))
+        actions = tk.Frame(saved, bg=BG); actions.pack(fill="x", pady=(7, 0))
         self._button(actions, "Сонгосныг дахин хэвлэх", self.reprint_certificate, False).pack(side="left")
         self._button(actions, "Устгах", self.delete_certificate, False).pack(side="left", padx=8)
         self._refresh_certificate_templates()
         self._refresh_saved_certificates()
 
+    def _draw_certificate_art(self, canvas, row, recipient="", achievement="", teacher="", organization="", issue_date=""):
+        canvas.delete("all")
+        width=max(canvas.winfo_width(),220); height=max(canvas.winfo_height(),160)
+        accent,pale,paper=CERT_DESIGNS.get(row["style"],CERT_DESIGNS["gold"])["colors"]
+        pad=18 if width>340 else 9
+        x1,y1,x2,y2=pad,12,width-pad,height-12
+        canvas.create_rectangle(x1,y1,x2,y2,fill=paper,outline=accent,width=3)
+        inset=7 if width>340 else 4
+        canvas.create_rectangle(x1+inset,y1+inset,x2-inset,y2-inset,outline=accent,width=1)
+        motif=CERT_DESIGNS[row["style"]]["motif"]
+        fs=max(7,min(13,int(width/42)))
+        for yy in (y1+12,y2-13):
+            canvas.create_text(width/2,yy,text=motif,fill=accent,font=("Segoe UI Symbol",fs,"bold"))
+        for xx in (x1+14,x2-14):
+            canvas.create_text(xx,(y1+y2)/2,text="❖",fill=accent,font=("Segoe UI Symbol",fs+2,"bold"))
+        # Corner rosettes recall the continuous ulzii and alhan patterns on print.
+        for xx in (x1+10,x2-10):
+            for yy in (y1+10,y2-10):
+                r=max(3,fs//2)
+                canvas.create_polygon(xx,yy-r,xx+r,yy,xx,yy+r,xx-r,yy,
+                                     fill=pale,outline=accent,width=1)
+        # Repeating angular knot marks echo the ulzii border used by the print view.
+        unit=max(2, int(width/105))
+        step=unit*4
+        line_width=max(1, unit//2)
+        for xx in range(int(x1+24), int(x2-18), step):
+            points=[xx,y1+5, xx+unit,y1+5, xx+unit,y1+5+unit,
+                    xx+2*unit,y1+5+unit, xx+2*unit,y1+5,
+                    xx+3*unit,y1+5, xx+3*unit,y1+5+3*unit,
+                    xx,y1+5+3*unit, xx,y1+5]
+            canvas.create_line(*points,fill=accent,width=line_width,joinstyle="miter")
+            bottom_points=[xx,y2-5, xx+unit,y2-5, xx+unit,y2-5-unit,
+                           xx+2*unit,y2-5-unit, xx+2*unit,y2-5,
+                           xx+3*unit,y2-5, xx+3*unit,y2-5-3*unit,
+                           xx,y2-5-3*unit, xx,y2-5]
+            canvas.create_line(*bottom_points,fill=accent,width=line_width,joinstyle="miter")
+        title=row["title"] or "ӨРГӨМЖЛӨЛ"
+        subtitle=row["subtitle"] or "Амжилтаа үнэлүүлэв"
+        scale=max(.65,min(1.0,width/560))
+        title_y=height*.30
+        if row["logo"] and row["logo_mime"]=="image/png" and width>340:
+            try:
+                self.preview_logo_photo=tk.PhotoImage(data=base64.b64encode(row["logo"]).decode("ascii"),format="png")
+                factor=max(1, int(max(self.preview_logo_photo.width()/34,self.preview_logo_photo.height()/34)))
+                self.preview_logo_photo=self.preview_logo_photo.subsample(factor,factor)
+                canvas.create_image(width/2,height*.19,image=self.preview_logo_photo)
+                title_y=height*.34
+            except tk.TclError:
+                self.preview_logo_photo=None
+        canvas.create_text(width/2,title_y,text=title,fill=accent,
+                           font=("Georgia",max(10,int(19*scale)),"bold"),width=width*.78)
+        canvas.create_text(width/2,title_y+height*.10,text=subtitle,fill=MUTED,
+                           font=("Segoe UI",max(7,int(10*scale))),width=width*.75)
+        name=recipient or "Сурагчийн нэр"
+        canvas.create_text(width/2,height*.56,text=name,fill=INK,
+                           font=("Segoe UI",max(10,int(17*scale)),"bold"),width=width*.78)
+        canvas.create_line(width*.28,height*.62,width*.72,height*.62,fill=accent,width=1)
+        achievement=achievement or "Амжилт, баяр хүргэх шалтгаан"
+        canvas.create_text(width/2,height*.71,text=achievement,fill=MUTED,
+                           font=("Segoe UI",max(7,int(9*scale))),width=width*.70)
+        meta="  •  ".join(v for v in (organization,teacher,issue_date) if v)
+        if not meta: meta="Сургууль  •  Багш  •  Огноо"
+        canvas.create_text(width/2,height*.86,text=meta,fill=accent,
+                           font=("Segoe UI",max(6,int(8*scale))),width=width*.78)
+
+    def _draw_certificate_preview(self):
+        if not hasattr(self,"cert_preview") or not hasattr(self,"active_cert_template"): return
+        self._draw_certificate_art(
+            self.cert_preview,self.active_cert_template,
+            self.cert_vars["recipient"].get(),self.cert_vars["achievement"].get(),
+            self.cert_vars["teacher"].get(),self.cert_vars["organization"].get(),
+            self.cert_vars["issue_date"].get()
+        )
+
+    def open_certificate_gallery(self):
+        if not hasattr(self,"cert_templates"): self._refresh_certificate_templates()
+        win=tk.Toplevel(self);win.title("Монгол загварын сан · 20 өргөмжлөл")
+        win.configure(bg=BG);win.geometry("1120x760");win.minsize(900,620);win.transient(self)
+        header=tk.Frame(win,bg=WHITE,padx=22,pady=16);header.pack(fill="x")
+        tk.Label(header,text="Өргөмжлөлийн загварын сан",bg=WHITE,fg=INK,
+                 font=("Segoe UI",17,"bold")).pack(anchor="w")
+        tk.Label(header,text="Загвар дээр дарж сонгоно уу · Сонгосон загвар шууд preview дээр харагдана",
+                 bg=WHITE,fg=MUTED,font=("Segoe UI",9)).pack(anchor="w",pady=(4,0))
+        shell=tk.Frame(win,bg=BG);shell.pack(fill="both",expand=True,padx=18,pady=18)
+        gallery=tk.Canvas(shell,bg=BG,highlightthickness=0)
+        scrollbar=ttk.Scrollbar(shell,orient="vertical",command=gallery.yview,style="Vertical.TScrollbar")
+        content=tk.Frame(gallery,bg=BG)
+        window_id=gallery.create_window((0,0),window=content,anchor="nw")
+        gallery.configure(yscrollcommand=scrollbar.set)
+        gallery.pack(side="left",fill="both",expand=True);scrollbar.pack(side="right",fill="y")
+        def resize_content(_event=None):
+            gallery.itemconfigure(window_id,width=gallery.winfo_width())
+            gallery.configure(scrollregion=gallery.bbox("all"))
+        content.bind("<Configure>",resize_content);gallery.bind("<Configure>",resize_content)
+        def wheel_scroll(event): gallery.yview_scroll(int(-1*(event.delta/120)),"units")
+        gallery.bind_all("<MouseWheel>",wheel_scroll)
+        def close_gallery():
+            gallery.unbind_all("<MouseWheel>")
+            win.destroy()
+        columns=4
+        for i,row in enumerate(self.cert_templates):
+            r,c=divmod(i,columns)
+            selected=row["id"]==self.active_cert_template["id"]
+            card=tk.Frame(content,bg=WHITE,padx=11,pady=10,
+                          highlightthickness=2 if selected else 1,
+                          highlightbackground=BLUE if selected else BORDER,cursor="hand2")
+            card.grid(row=r,column=c,sticky="nsew",padx=7,pady=7)
+            thumb=tk.Canvas(card,width=220,height=128,bg="#F5F7FB",highlightthickness=0)
+            thumb.pack(fill="x")
+            self._draw_certificate_art(thumb,row,"Сурагчийн нэр","Амжилтын тайлбар")
+            tk.Label(card,text=row["name"],bg=WHITE,fg=INK,font=("Segoe UI",10,"bold")).pack(anchor="w",pady=(8,1))
+            tk.Label(card,text=row["title"],bg=WHITE,fg=MUTED,font=("Segoe UI",7)).pack(anchor="w")
+            def choose(template=row):
+                self.cert_template_var.set(template["name"]);self._load_certificate_template(template);close_gallery()
+            card.bind("<Button-1>",lambda _e,fn=choose:fn())
+            for child in card.winfo_children():child.bind("<Button-1>",lambda _e,fn=choose:fn())
+            content.grid_columnconfigure(c,weight=1,uniform="certificate")
+        footer=tk.Frame(win,bg=WHITE,padx=20,pady=12);footer.pack(fill="x")
+        self._button(footer,"Болих",close_gallery,False).pack(side="right")
     def _refresh_certificate_templates(self):
         self.cert_templates = self.store.all("SELECT * FROM certificate_templates ORDER BY id")
-        self.cert_template_combo["values"] = [r["name"] for r in self.cert_templates]
-        if self.cert_templates:
-            chosen = next((r for r in self.cert_templates if r["name"] == self.cert_template_var.get()), self.cert_templates[0])
-            self.cert_template_var.set(chosen["name"])
-            self._load_certificate_template(chosen)
-        names = [r["name"] for r in self.store.all("SELECT name FROM students WHERE class_id=? ORDER BY name", (self.active_class,))] if self.active_class else []
-        self.cert_student_combo["values"] = names
-
+        current_name=self.cert_template_var.get() if hasattr(self,"cert_template_var") else ""
+        chosen=next((row for row in self.cert_templates if row["name"]==current_name),None)
+        if chosen is None and self.cert_templates: chosen=self.cert_templates[0]
+        names=[row["name"] for row in self.store.all("SELECT name FROM students WHERE class_id=? ORDER BY name",(self.active_class,))] if self.active_class else []
+        if hasattr(self,"cert_student_combo"): self.cert_student_combo["values"]=names
+        if chosen: self.cert_template_var.set(chosen["name"]);self._load_certificate_template(chosen)
     def _load_certificate_template(self, row):
-        self.active_cert_template = row
-        logo = row["logo"]
-        self.cert_logo_label.config(text="Лого оруулсан ✓" if logo else "Лого сонгоогүй")
-
+        self.active_cert_template=row
+        if hasattr(self,"cert_template_name"): self.cert_template_name.config(text=f"{row['name']}  ·  {row['title']}")
+        if hasattr(self,"cert_logo_label"): self.cert_logo_label.config(text="Лого оруулсан ✓" if row["logo"] else "Лого сонгоогүй")
+        self._draw_certificate_preview()
     def _certificate_template_selected(self, _event=None):
-        row = next((r for r in self.cert_templates if r["name"] == self.cert_template_var.get()), None)
-        if row: self._load_certificate_template(row)
-
+        row=next((template for template in self.cert_templates if template["name"]==self.cert_template_var.get()),None)
+        if row:self._load_certificate_template(row)
     def _certificate_student_selected(self, _event=None):
         self.cert_vars["recipient"].set(self.cert_student_combo.get())
 
