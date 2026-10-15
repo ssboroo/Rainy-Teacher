@@ -189,9 +189,13 @@ class SlideDesignEditor:
                 except Exception:
                     self.canvas.create_rectangle(x, y, x+w, y+h, outline="#D35454", tags=(f"el{idx}",))
             else:
-                self.canvas.create_text(x, y, anchor="nw", text=el.get("text", "Текст"),
-                    fill=el.get("color", "#17243A"), width=w,
-                    font=("Segoe UI", max(7, int(float(el.get("font_size", 24))*self.scale)),
+                align = el.get("align") if el.get("align") in ("left", "center", "right") else "left"
+                anchor = {"left":"nw", "center":"n", "right":"ne"}[align]
+                text_x = x + w/2 if align == "center" else x + w if align == "right" else x
+                family = el.get("font") if el.get("font") in ("Georgia", "Segoe UI", "Arial", "Times New Roman") else "Segoe UI"
+                self.canvas.create_text(text_x, y, anchor=anchor, text=el.get("text", "Текст"),
+                    fill=el.get("color", "#17243A"), width=w, justify=align,
+                    font=(family, max(7, int(float(el.get("font_size", 24))*self.scale)),
                           "bold" if el.get("bold") else "normal"), tags=(f"el{idx}",))
             if self.selected == idx:
                 self.canvas.create_rectangle(x-3, y-3, x+w+3, y+h+3, outline="#3478F6",
