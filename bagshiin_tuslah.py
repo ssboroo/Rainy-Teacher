@@ -7,6 +7,7 @@ import html
 import json
 import mimetypes
 import os
+import re
 import shutil
 import sqlite3
 import sys
@@ -18,13 +19,14 @@ from pathlib import Path
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog, simpledialog
 from powerpoint_export import convert_pptx_to_legacy_ppt, save_certificate_pptx, save_presentation_pptx
+from design_editor import SlideDesignEditor
 try:
     from PIL import Image, ImageTk
 except ImportError:
     Image = ImageTk = None
 
 APP_NAME = "Багшийн Туслах"
-APP_VERSION = "1.6.0"
+APP_VERSION = "1.7.0"
 BG = "#F4F7FB"
 NAV = "#101B31"
 BLUE = "#3478F6"
@@ -76,13 +78,14 @@ class Store:
         CREATE TABLE IF NOT EXISTS certificate_templates (
           id INTEGER PRIMARY KEY, name TEXT NOT NULL UNIQUE, style TEXT NOT NULL,
           title TEXT NOT NULL, subtitle TEXT NOT NULL, body TEXT NOT NULL,
-          logo BLOB, logo_mime TEXT NOT NULL DEFAULT ''
+          logo BLOB, logo_mime TEXT NOT NULL DEFAULT '', design_json TEXT NOT NULL DEFAULT '{}'
         );
         CREATE TABLE IF NOT EXISTS certificates (
           id INTEGER PRIMARY KEY, template_id INTEGER, template_name TEXT NOT NULL,
           style TEXT NOT NULL, title TEXT NOT NULL, subtitle TEXT NOT NULL, body TEXT NOT NULL,
           recipient TEXT NOT NULL, achievement TEXT NOT NULL DEFAULT '', teacher TEXT NOT NULL DEFAULT '',
           organization TEXT NOT NULL DEFAULT '', issue_date TEXT NOT NULL, logo BLOB, logo_mime TEXT NOT NULL DEFAULT '',
+          design_json TEXT NOT NULL DEFAULT '{}',
           saved_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY(template_id) REFERENCES certificate_templates(id) ON DELETE SET NULL
         );
@@ -104,6 +107,10 @@ class Store:
         CREATE INDEX IF NOT EXISTS idx_student_class ON students(class_id);
         CREATE INDEX IF NOT EXISTS idx_attendance_day ON attendance(day);
         """)
+        for table in ("certificate_templates", "certificates"):
+            columns={row[1] for row in self.db.execute(f"PRAGMA table_info({table})")}
+            if "design_json" not in columns:
+                self.db.execute(f"ALTER TABLE {table} ADD COLUMN design_json TEXT NOT NULL DEFAULT '{{}}'")
         self._seed_certificate_templates()
         self.db.commit()
 
@@ -206,6 +213,37 @@ def presentation_html(deck: dict) -> str:
     pages = []
     for index, slide in enumerate(slides, 2):
         stitle = html.escape(str(slide.get("title", "Шинэ слайд")))
+        elements = slide.get("elements")
+        if isinstance(elements, list) and elements:
+            def safe_color(value, fallback):
+                value=str(value or fallback)
+                return value if re.fullmatch(r"#[0-9a-fA-F]{6}",value) else fallback
+            nodes=[]
+            for el in elements:
+                try:
+                    x=float(el.get("x",0))/960*100; y=float(el.get("y",0))/540*100
+                    w=float(el.get("w",100))/960*100; h=float(el.get("h",40))/540*100
+                    style=f"left:{x:.3f}%;top:{y:.3f}%;width:{w:.3f}%;height:{h:.3f}%;"
+                    kind=el.get("type","text")
+                    if kind in ("rect","ellipse"):
+                        color=safe_color(el.get("fill"),accent)
+                        radius="50%" if kind=="ellipse" else "3pt"
+                        nodes.append(f"<div class='canvas-el' style='{style}background:{color};border-radius:{radius}'></div>")
+                    elif kind=="image" and el.get("data"):
+                        data=html.escape(str(el["data"]),quote=True)
+                        mime=el.get("mime") if el.get("mime") in ("image/png","image/jpeg","image/webp") else "image/png"
+                        nodes.append(f"<img class='canvas-el' style='{style}object-fit:contain' src='data:{mime};base64,{data}'>")
+                    else:
+                        color=safe_color(el.get("color"),ink)
+                        size=max(8,min(96,int(float(el.get("font_size",24)))))
+                        weight="700" if el.get("bold") else "400"
+                        text=html.escape(str(el.get("text",""))).replace("\n","<br>")
+                        nodes.append(f"<div class='canvas-el' style='{style}font-size:{size}pt;line-height:1.15;color:{color};font-weight:{weight};white-space:pre-wrap'>{text}</div>")
+                except (ValueError,TypeError,KeyError):
+                    continue
+            slide_bg=safe_color(slide.get("background"),bg)
+            pages.append(f"<section class='slide canvas-slide' style='background:{slide_bg}'>{''.join(nodes)}</section>")
+            continue
         points = slide.get("points", [])
         if isinstance(points, str): points = [p.strip() for p in points.splitlines() if p.strip()]
         bullets = "".join(f"<li><i></i><span>{html.escape(str(point))}</span></li>" for point in points if str(point).strip())
@@ -214,6 +252,7 @@ def presentation_html(deck: dict) -> str:
         pages.append("<section class='slide content-slide'><div class='topline'><b>RAINY TEACHER</b><span></span></div><div class='slide-kicker'>ЭХЛЭХЭД БЭЛЭН</div><h2>Эхний слайдаа нэмээрэй</h2><div class='rule'></div><ul><li><i></i><span>Слайдын гарчиг болон гол санаагаа оруулна уу.</span></li></ul><div class='bottomline'><span>Танилцуулга</span><b>02</b></div></section>")
     return f"""<!doctype html><html lang='mn'><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>{title} · Rainy Teacher</title><style>
     *{{box-sizing:border-box}}@page{{size:13.333in 7.5in;margin:0}}body{{margin:0;background:#e9edf4;color:{ink};font-family:'Segoe UI','Arial',sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}}.toolbar{{position:fixed;z-index:9;top:18px;right:22px}}.toolbar button{{border:0;border-radius:10px;background:{accent};color:#fff;padding:12px 18px;font-weight:700;box-shadow:0 6px 20px #0002;cursor:pointer}}.slide{{width:13.333in;height:7.5in;margin:24px auto;background:{bg};position:relative;overflow:hidden;padding:.68in .82in;box-shadow:0 10px 38px #182b4630;page-break-after:always;break-after:page}}.slide:last-of-type{{page-break-after:auto;break-after:auto}}.cover{{background:radial-gradient(ellipse at 82% 15%,{soft} 0 19%,transparent 19.2%),linear-gradient(125deg,{bg} 0 63%,{soft} 63% 100%);display:flex;flex-direction:column;justify-content:space-between}}.cover:before{{content:'';position:absolute;width:4.8in;height:4.8in;border:1px solid {accent}55;border-radius:50%;right:-1.2in;bottom:-2.5in;box-shadow:0 0 0 18px {bg}66,0 0 0 19px {accent}35,0 0 0 42px {bg}40,0 0 0 43px {accent}22}}.cover-mark,.topline{{position:relative;display:flex;justify-content:space-between;align-items:center;font-size:10pt;letter-spacing:2px;color:{accent};font-weight:700}}.cover-mark span{{font-size:20pt}}.cover-copy{{position:relative;max-width:8.7in;margin-top:-.12in}}.eyebrow,.slide-kicker{{font-size:11pt;letter-spacing:3px;color:{accent};font-weight:700;text-transform:uppercase}}h1{{font-size:42pt;line-height:1.14;margin:.24in 0;color:{ink};max-width:8.5in}}.cover-line,.rule{{width:1.2in;height:5px;background:{accent};border-radius:5px}}.cover-copy p{{font-size:17pt;color:{ink};opacity:.72;margin-top:.25in}}.cover-foot,.bottomline{{position:relative;display:flex;justify-content:space-between;border-top:1px solid {accent}44;padding-top:12px;color:{ink};opacity:.7;font-size:10pt;letter-spacing:1px}}.content-slide{{background:linear-gradient(120deg,{bg}, {bg} 75%,{soft})}}.content-slide:before{{content:'';position:absolute;left:0;top:0;bottom:0;width:14px;background:{accent}}}.content-slide:after{{content:'';position:absolute;right:.55in;top:.55in;width:.22in;height:.22in;border:2px solid {accent}77;transform:rotate(45deg)}}.mode-steppe.cover:after{{content:'';position:absolute;left:.5in;top:1.35in;width:.34in;height:4.2in;border-left:2px solid {accent}66;border-right:2px solid {accent}66;background:repeating-linear-gradient(0deg,transparent 0 .16in,{accent}55 .17in .19in,transparent .2in .34in)}}.mode-classic.cover{{outline:2px solid {accent}66;outline-offset:-.22in}}.mode-split .cover-copy{{border-left:7px solid {accent};padding-left:.34in}}.mode-shape.cover:before{{width:5.4in;height:5.4in;right:-1.8in;bottom:-2.8in}}.mode-dark.content-slide:before{{width:.12in}}.mode-dark .cover-copy p{{opacity:.84}}.mode-minimal.cover:before,.mode-minimal.cover:after{{display:none}}.mode-minimal.content-slide:before{{width:4px}}.mode-wave.cover:before{{height:2.3in;width:7in;border:0;border-radius:55% 45% 0 0;background:{soft};right:-.4in;bottom:-1.6in}}.mode-wave.cover:after{{content:'';position:absolute;right:-.35in;bottom:.65in;width:7in;height:1.6in;border-top:3px solid {accent}66;border-radius:55% 50% 0 0;transform:rotate(-7deg)}}.topline{{padding-bottom:15px;border-bottom:1px solid {accent}44}}.slide-kicker{{margin-top:.62in;font-size:9pt}}h2{{font-size:32pt;line-height:1.16;margin:.18in 0 .24in;color:{ink}}}.rule{{width:.85in;height:4px}}ul{{list-style:none;padding:0;margin:.38in 0 0;max-width:10.2in}}li{{display:flex;align-items:flex-start;gap:18px;margin:0 0 .2in;font-size:20pt;line-height:1.35;color:{ink}}}li i{{flex:0 0 11px;height:11px;border-radius:50%;background:{accent};margin-top:12px;box-shadow:0 0 0 6px {soft}}}.bottomline{{position:absolute;left:.82in;right:.82in;bottom:.48in}}.bottomline b{{color:{accent};opacity:1}}@media screen{{body{{padding:1px}}}}@media print{{body{{background:white}}.slide{{margin:0;box-shadow:none}}.toolbar{{display:none}}}}
+    .canvas-slide{{padding:0!important}}.canvas-el{{position:absolute;overflow:hidden;box-sizing:border-box}}
     </style><div class='toolbar'><button onclick='window.print()'>PDF болгон хадгалах / хэвлэх</button></div>{cover}{''.join(pages)}</html>"""
 
 
@@ -270,6 +309,43 @@ def mongolian_border_svg(pattern: str, accent: str) -> str:
 def certificate_html(record: dict) -> str:
     design = CERT_DESIGNS.get(record.get("style", "gold"), CERT_DESIGNS["gold"])
     accent, pale, paper = design["colors"]
+    try: custom=json.loads(record.get("design_json") or "{}")
+    except (TypeError,json.JSONDecodeError):custom={}
+    if custom.get("elements"):
+        values={"{name}":str(record.get("recipient") or "Сурагчийн нэр"),
+                "{achievement}":str(record.get("achievement") or "Амжилтын тайлбар"),
+                "{organization}":str(record.get("organization") or "Сургуулийн нэр"),
+                "{teacher}":str(record.get("teacher") or "Багшийн нэр"),
+                "{date}":str(record.get("issue_date") or "2026-10-15")}
+        nodes=[]
+        for el in custom["elements"]:
+            try:
+                x,y,w,h=[float(el.get(k,d)) for k,d in (("x",0),("y",0),("w",100),("h",40))]
+                style=f"left:{x/960*100:.4f}%;top:{y/679*100:.4f}%;width:{w/960*100:.4f}%;height:{h/679*100:.4f}%;"
+                kind=el.get("type","text")
+                if kind in ("rect","ellipse"):
+                    color=str(el.get("fill",accent))
+                    color=color if re.fullmatch(r"#[0-9a-fA-F]{6}",color) else accent
+                    nodes.append(f"<div style='position:absolute;{style}background:{color};border-radius:{'50%' if kind=='ellipse' else '2pt'}'></div>")
+                elif kind=="image" and el.get("data"):
+                    mime=el.get("mime") if el.get("mime") in ("image/png","image/jpeg","image/webp") else "image/png"
+                    nodes.append(f"<img style='position:absolute;{style}object-fit:contain' src='data:{mime};base64,{html.escape(str(el['data']),quote=True)}'>")
+                else:
+                    color=str(el.get("color",accent))
+                    color=color if re.fullmatch(r"#[0-9a-fA-F]{6}",color) else accent
+                    size=max(8,min(96,int(float(el.get("font_size",22)))))
+                    text=str(el.get("text",""))
+                    for token,value in values.items():text=text.replace(token,value)
+                    weight="700" if el.get("bold") else "400"
+                    nodes.append(f"<div style='position:absolute;{style}font-size:{size}pt;line-height:1.15;color:{color};font-weight:{weight};white-space:pre-wrap;overflow:hidden'>{html.escape(text).replace(chr(10),'<br>')}</div>")
+            except (ValueError,TypeError,KeyError):continue
+        background=str(custom.get("background",paper))
+        if not re.fullmatch(r"#[0-9a-fA-F]{6}",background):background=paper
+        return f"""<!doctype html><html lang='mn'><meta charset='utf-8'><title>{html.escape(str(record.get('title','ӨРГӨМЖЛӨЛ')))} · {html.escape(values['{name}'])}</title><style>
+        @page{{size:A4 landscape;margin:0}}*{{box-sizing:border-box}}body{{margin:0;background:#e9edf3;font-family:'Segoe UI',Arial,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+        .sheet{{width:297mm;height:210mm;margin:12px auto;background:{background};position:relative;overflow:hidden;box-shadow:0 8px 36px #9aa5b5}}
+        @media print{{body{{background:white}}.sheet{{margin:0;box-shadow:none}}}}
+        </style><main class='sheet'>{''.join(nodes)}</main></html>"""
     motif, border, layout = design["motif"], design["border"], design["layout"]
     border_svg = mongolian_border_svg(design["pattern"], accent)
     vals = {k: str(record.get(k, "") or "") for k in ("recipient", "achievement", "teacher", "organization", "issue_date", "title", "subtitle", "body")}
@@ -801,6 +877,7 @@ class App(tk.Tk):
         self.cert_template_name.pack(side="left")
         self._button(toolbar, "▦   20 загвар харах", self.open_certificate_gallery, False).pack(side="left", padx=(12, 7))
         self._button(toolbar, "Загвар засах", self.edit_certificate_template, False).pack(side="left")
+        self._button(toolbar, "Дизайныг чирж засах", self.design_certificate_template, False).pack(side="left", padx=7)
         self._button(toolbar, "Лого нэмэх", self.choose_certificate_logo, False).pack(side="right", padx=(7, 0))
         self._button(toolbar, "Лого арилгах", self.remove_certificate_logo, False).pack(side="right")
         self.cert_logo_label = tk.Label(toolbar, text="Лого сонгоогүй", bg=BG, fg=MUTED, font=("Segoe UI", 8))
@@ -862,9 +939,38 @@ class App(tk.Tk):
         self._refresh_saved_certificates()
 
     def _draw_certificate_art(self, canvas, row, recipient="", achievement="", teacher="", organization="", issue_date=""):
+        row=dict(row)
         canvas.delete("all")
         width=max(canvas.winfo_width(),220); height=max(canvas.winfo_height(),160)
         accent,pale,paper=CERT_DESIGNS.get(row["style"],CERT_DESIGNS["gold"])["colors"]
+        try: custom=json.loads(row.get("design_json") or "{}")
+        except (TypeError,json.JSONDecodeError): custom={}
+        if custom.get("elements"):
+            sx,sy=width/960,height/679
+            canvas.configure(bg=custom.get("background",paper))
+            self.preview_logo_photo=None
+            values={"{name}":recipient or "Сурагчийн нэр","{achievement}":achievement or "Амжилтын тайлбар",
+                    "{organization}":organization or "Сургуулийн нэр","{teacher}":teacher or "Багшийн нэр",
+                    "{date}":issue_date or "2026-10-15"}
+            for el in custom["elements"]:
+                try:
+                    x,y,w,h=[float(el.get(k,d)) for k,d in (("x",0),("y",0),("w",100),("h",40))]
+                    coords=(x*sx,y*sy,(x+w)*sx,(y+h)*sy);kind=el.get("type","text")
+                    if kind in ("rect","ellipse"):
+                        if kind=="ellipse":canvas.create_oval(*coords,fill=el.get("fill",accent),outline="")
+                        else:canvas.create_rectangle(*coords,fill=el.get("fill",accent),outline="")
+                    elif kind=="image" and el.get("data") and Image and ImageTk:
+                        image=Image.open(BytesIO(base64.b64decode(el["data"]))).convert("RGBA")
+                        image.thumbnail((max(1,int(w*sx)),max(1,int(h*sy))),Image.Resampling.LANCZOS)
+                        self.preview_logo_photo=ImageTk.PhotoImage(image);canvas.create_image(coords[0]+(coords[2]-coords[0])/2,coords[1]+(coords[3]-coords[1])/2,image=self.preview_logo_photo)
+                    else:
+                        text=str(el.get("text",""))
+                        for token,value in values.items():text=text.replace(token,value)
+                        canvas.create_text(coords[0],coords[1],anchor="nw",text=text,fill=el.get("color",accent),
+                            width=coords[2]-coords[0],font=("Segoe UI",max(6,int(float(el.get("font_size",22))*min(sx,sy))),"bold" if el.get("bold") else "normal"))
+                except (ValueError,TypeError,tk.TclError,OSError):continue
+            return
+        canvas.configure(bg=paper)
         pad=18 if width>340 else 9
         x1,y1,x2,y2=pad,12,width-pad,height-12
         canvas.create_rectangle(x1,y1,x2,y2,fill=paper,outline=accent,width=3)
@@ -1065,12 +1171,49 @@ class App(tk.Tk):
         foot=tk.Frame(win,bg=BG); foot.grid(row=7,column=0,columnspan=2,padx=22,pady=18,sticky="e")
         self._button(foot,"Болих",win.destroy,False).pack(side="left",padx=5); self._button(foot,"Загварыг хадгалах",save).pack(side="left")
 
+    def design_certificate_template(self):
+        row=getattr(self,"active_cert_template",None)
+        if not row:return
+        row=dict(row)
+        accent,pale,paper=CERT_DESIGNS.get(row["style"],CERT_DESIGNS["gold"])["colors"]
+        try: design=json.loads(row.get("design_json") or "{}")
+        except (TypeError,json.JSONDecodeError):design={}
+        if not design.get("elements"):
+            elements=[
+                {"type":"rect","x":24,"y":24,"w":912,"h":4,"fill":accent},
+                {"type":"rect","x":24,"y":651,"w":912,"h":4,"fill":accent},
+                {"type":"rect","x":24,"y":24,"w":4,"h":631,"fill":accent},
+                {"type":"rect","x":932,"y":24,"w":4,"h":631,"fill":accent},
+                {"type":"text","text":row["title"],"x":100,"y":82,"w":760,"h":62,"font_size":34,"color":accent,"bold":True},
+                {"type":"text","text":row["subtitle"],"x":120,"y":158,"w":720,"h":42,"font_size":17,"color":"#627086","bold":False},
+                {"type":"text","text":"{name}","x":100,"y":245,"w":760,"h":62,"font_size":32,"color":"#1C2940","bold":True},
+                {"type":"text","text":row["body"],"x":105,"y":337,"w":750,"h":116,"font_size":19,"color":"#43516A","bold":False},
+                {"type":"text","text":"{organization}","x":65,"y":552,"w":250,"h":45,"font_size":14,"color":"#43516A","bold":False},
+                {"type":"text","text":"{teacher}","x":355,"y":552,"w":250,"h":45,"font_size":14,"color":"#43516A","bold":False},
+                {"type":"text","text":"{date}","x":645,"y":552,"w":250,"h":45,"font_size":14,"color":"#43516A","bold":False},
+            ]
+            if row.get("logo"):
+                try:
+                    logo=Image.open(BytesIO(row["logo"])).convert("RGBA");stream=BytesIO();logo.save(stream,format="PNG")
+                    logo_data=stream.getvalue()
+                except Exception:logo_data=row["logo"]
+                elements.append({"type":"image","data":base64.b64encode(logo_data).decode("ascii"),"mime":"image/png","x":440,"y":28,"w":80,"h":48})
+            design={"background":paper,"elements":elements}
+        def saved(slides):
+            updated=slides[0]
+            payload={"background":updated.get("background",paper),"elements":updated.get("elements",[])}
+            self.store.run("UPDATE certificate_templates SET design_json=? WHERE id=?",(json.dumps(payload,ensure_ascii=False),row["id"]))
+            self._refresh_certificate_templates()
+            messagebox.showinfo("Загвар хадгалагдлаа","Өргөмжлөлийн дизайн хадгалагдлаа. Шинээр гаргах болон дахин хэвлэхэд энэ загвар хэрэглэгдэнэ.",parent=self)
+        theme={"name":row["name"],"accent":accent,"bg":design.get("background",paper),"ink":"#1C2940","soft":pale}
+        SlideDesignEditor(self,[{"title":row["title"],"elements":design["elements"],"background":design.get("background",paper)}],theme,saved,canvas_height=679,single_slide=True)
+
     def _certificate_payload(self):
         row = self.active_cert_template
         return {"template_id":row["id"],"template_name":row["name"],"style":row["style"],"title":row["title"],"subtitle":row["subtitle"],"body":row["body"],
                 "recipient":self.cert_vars["recipient"].get().strip(),"achievement":self.cert_vars["achievement"].get().strip(),
                 "teacher":self.cert_vars["teacher"].get().strip(),"organization":self.cert_vars["organization"].get().strip(),
-                "issue_date":self.cert_vars["issue_date"].get().strip(),"logo":row["logo"],"logo_mime":row["logo_mime"]}
+                "issue_date":self.cert_vars["issue_date"].get().strip(),"logo":row["logo"],"logo_mime":row["logo_mime"],"design_json":row["design_json"]}
 
     def save_certificate(self, print_after=False):
         p = self._certificate_payload()
@@ -1078,8 +1221,8 @@ class App(tk.Tk):
             messagebox.showwarning("Мэдээлэл дутуу", "Сурагчийн нэр болон амжилт/шалтгааныг оруулна уу.", parent=self); return
         try: datetime.strptime(p["issue_date"], "%Y-%m-%d")
         except ValueError: messagebox.showwarning("Огноо буруу", "Огноог YYYY-MM-DD хэлбэрээр оруулна уу.", parent=self); return
-        self.store.run("INSERT INTO certificates(template_id,template_name,style,title,subtitle,body,recipient,achievement,teacher,organization,issue_date,logo,logo_mime) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                       tuple(p[k] for k in ("template_id","template_name","style","title","subtitle","body","recipient","achievement","teacher","organization","issue_date","logo","logo_mime")))
+        self.store.run("INSERT INTO certificates(template_id,template_name,style,title,subtitle,body,recipient,achievement,teacher,organization,issue_date,logo,logo_mime,design_json) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                       tuple(p[k] for k in ("template_id","template_name","style","title","subtitle","body","recipient","achievement","teacher","organization","issue_date","logo","logo_mime","design_json")))
         cert = dict(p); cert["id"] = self.store.db.execute("SELECT last_insert_rowid()").fetchone()[0]
         self._refresh_saved_certificates()
         if print_after: self._open_certificate(cert)
@@ -1280,6 +1423,7 @@ class App(tk.Tk):
         controls=tk.Frame(self.body,bg=BG);controls.pack(fill="x",pady=(0,10))
         self._button(controls,"＋ Шинэ presentation",lambda:self.open_presentation_editor()).pack(side="left")
         self._button(controls,"Сонгосныг засах",self.edit_selected_presentation,False).pack(side="left",padx=8)
+        self._button(controls,"Canva маягаар дизайн засах",self.design_selected_presentation,False).pack(side="left",padx=8)
         self._button(controls,"PowerPoint (.pptx) хадгалах",self.export_selected_presentation_pptx,False).pack(side="left",padx=8)
         self._button(controls,"PDF / хэвлэх",self.print_selected_presentation,False).pack(side="left")
         self._button(controls,"Устгах",self.delete_selected_presentation,False).pack(side="right")
@@ -1409,6 +1553,22 @@ class App(tk.Tk):
     def edit_selected_presentation(self):
         deck=self._selected_presentation()
         if deck:self.open_presentation_editor(deck["id"])
+
+    def design_selected_presentation(self):
+        deck=self._selected_presentation()
+        if not deck:return
+        try: slides=json.loads(deck.get("slides_json") or "[]")
+        except (TypeError,json.JSONDecodeError): slides=[]
+        if not slides:
+            messagebox.showinfo("Слайд алга байна","Эхлээд presentation-дээ слайдын агуулга нэмнэ үү.",parent=self);return
+        theme=PRESENTATION_THEMES.get(deck.get("theme"),PRESENTATION_THEMES["steppe"])
+        def save_design(updated_slides):
+            serialized=json.dumps(updated_slides,ensure_ascii=False)
+            now=datetime.now().isoformat(timespec="minutes")
+            self.store.run("UPDATE presentations SET slides_json=?,updated_at=? WHERE id=?",(serialized,now,deck["id"]))
+            self._refresh_presentations()
+            messagebox.showinfo("Дизайн хадгалагдлаа","Слайдын өөрчлөлтүүд хадгалагдлаа. PPTX болгон гаргахад элемент бүр PowerPoint дээр засварлагдана.",parent=self)
+        SlideDesignEditor(self,slides,theme,save_design)
 
     def print_selected_presentation(self):
         deck=self._selected_presentation()
