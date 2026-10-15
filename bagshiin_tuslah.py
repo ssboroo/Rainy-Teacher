@@ -26,7 +26,7 @@ except ImportError:
     Image = ImageTk = None
 
 APP_NAME = "Багшийн Туслах"
-APP_VERSION = "1.7.0"
+APP_VERSION = "1.7.1"
 BG = "#F4F7FB"
 NAV = "#101B31"
 BLUE = "#3478F6"
